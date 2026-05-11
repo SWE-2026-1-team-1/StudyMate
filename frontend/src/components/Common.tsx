@@ -115,8 +115,18 @@ export function Illustration() {
   );
 }
 
+import person1 from "../assets/person1.svg";
+import person2 from "../assets/person2.svg";
+import person3 from "../assets/person3.svg";
+
 export function AvatarStack() {
-  return <span className="avatar-stack"><Avatar name="a" /><Avatar name="b" /><Avatar name="c" /></span>;
+  return (
+    <span className="avatar-stack">
+      <img src={person1} alt="User 1" className="avatar" />
+      <img src={person2} alt="User 2" className="avatar" />
+      <img src={person3} alt="User 3" className="avatar" />
+    </span>
+  );
 }
 
 export function Avatar({ name, className = "" }: { name: string; className?: string }) {

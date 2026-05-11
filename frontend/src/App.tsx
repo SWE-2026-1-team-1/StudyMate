@@ -15,8 +15,7 @@ export function App() {
   return (
     <div className="app-shell">
       <ScreenSwitcher current={screen} onChange={navigate} />
-      {screen === "login" && <AuthScreen mode="login" onNavigate={navigate} />}
-      {screen === "signup" && <AuthScreen mode="signup" onNavigate={navigate} />}
+      {(screen === "login" || screen === "signup") && <AuthScreen mode={screen} onNavigate={navigate} />}
       {screen === "main" && <MainDashboard onNavigate={navigate} />}
       {screen === "explore" && <ExplorePage onNavigate={navigate} />}
       {screen === "detail" && <StudyDetail onNavigate={navigate} />}
