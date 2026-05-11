@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
-import { Avatar, Field, Frame, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard, TopBar } from "../components/Common";
+import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import type { ProgressStudy as ProgressStudyItem, ScreenId } from "../types";
 
 type Navigate = (screen: ScreenId) => void;
 
-export function MainDashboard({ onNavigate }: { onNavigate: Navigate }) {
+export function MainDashboard({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
   const [searchQuery, setSearchQuery] = useState("");
   const isSearching = searchQuery.trim().length > 0;
 
   return (
-    <Shell onNavigate={onNavigate}>
+    <Shell current={current} onNavigate={onNavigate}>
       <section className="dashboard-main content-container">
         <Hero searchValue={searchQuery} onSearchChange={setSearchQuery} />
         {isSearching ? <ExploreResults onNavigate={onNavigate} /> : <MainDashboardContent onNavigate={onNavigate} />}
@@ -19,9 +19,9 @@ export function MainDashboard({ onNavigate }: { onNavigate: Navigate }) {
   );
 }
 
-export function ExplorePage({ onNavigate }: { onNavigate: Navigate }) {
+export function ExplorePage({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
   return (
-    <Shell onNavigate={onNavigate}>
+    <Shell current={current} onNavigate={onNavigate}>
       <section className="explore-page content-container">
         <label className="search-box explore-search">
           <i />
@@ -88,9 +88,9 @@ function TopicScroller() {
   );
 }
 
-export function StudyDetail({ onNavigate }: { onNavigate: Navigate }) {
+export function StudyDetail({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
   return (
-    <Shell onNavigate={onNavigate}>
+    <Shell current={current} onNavigate={onNavigate}>
       <section className="detail-page content-container">
         <div className="detail-top">
           <div>
@@ -134,45 +134,42 @@ export function StudyDetail({ onNavigate }: { onNavigate: Navigate }) {
   );
 }
 
-export function MyPage({ onNavigate }: { onNavigate: Navigate }) {
+export function MyPage({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
   return (
-    <Frame>
-      <TopBar onNavigate={onNavigate} />
-      <main className="profile-page content-container">
-        <section className="profile-hero">
-          <Avatar name="user" className="profile-photo" />
-          <div>
-            <h1>박지민 (Jimin Park) • Ajou University 3학년</h1>
-            <div className="keyword-set">
-              {profile.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}
-            </div>
+    <main className="profile-page content-container">
+      <section className="profile-hero">
+        <Avatar name="user" className="profile-photo" />
+        <div>
+          <h1>박지민 (Jimin Park) • Ajou University 3학년</h1>
+          <div className="keyword-set">
+            {profile.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}
           </div>
-          <button className="primary" type="button">프로필 편집</button>
-        </section>
-        <section className="profile-grid">
-          <div className="profile-study-section">
-            <h2>참여 중인 스터디</h2>
-            <div className="profile-content-grid">
-              <div className="profile-left-column">
-                <div className="mini-study-grid">
-                  {profile.progressStudies.map((study) => <ProgressStudy key={study.title} {...study} />)}
-                </div>
-                <Panel title="지원 현황" className="application-panel">
-                  {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
-                </Panel>
+        </div>
+        <button className="primary" type="button">프로필 편집</button>
+      </section>
+      <section className="profile-grid">
+        <div className="profile-study-section">
+          <h2>참여 중인 스터디</h2>
+          <div className="profile-content-grid">
+            <div className="profile-left-column">
+              <div className="mini-study-grid">
+                {profile.progressStudies.map((study) => <ProgressStudy key={study.title} {...study} />)}
               </div>
-              <Panel title="관심 키워드" className="keyword-panel">
-                <button className="edit-pencil" type="button">✎</button>
-                <div className="keyword-set color">
-                  {profile.interestKeywords.map((tag) => <span key={tag}>{tag}</span>)}
-                </div>
-                <button className="add-tag-button" type="button">+ Add Tag</button>
+              <Panel title="지원 현황" className="application-panel">
+                {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
               </Panel>
             </div>
+            <Panel title="관심 키워드" className="keyword-panel">
+              <button className="edit-pencil" type="button">✎</button>
+              <div className="keyword-set color">
+                {profile.interestKeywords.map((tag) => <span key={tag}>{tag}</span>)}
+              </div>
+              <button className="add-tag-button" type="button">+ Add Tag</button>
+            </Panel>
           </div>
-        </section>
-      </main>
-    </Frame>
+        </div>
+      </section>
+    </main>
   );
 }
 
@@ -187,30 +184,27 @@ function ProgressStudy({ title, people, time, value }: ProgressStudyItem) {
   );
 }
 
-export function CreateStudy({ step, onNavigate }: { step: 1 | 2 | 3; onNavigate: Navigate }) {
+export function CreateStudy({ current, step, onNavigate }: { current: ScreenId; step: 1 | 2 | 3; onNavigate: Navigate }) {
   const next = step === 1 ? "create-rules" : step === 2 ? "create-schedule" : "main";
   const title = step === 1 ? "기본 정보를 입력해주세요" : step === 2 ? "규칙 및 태그를 입력해주세요" : "일정 설정";
 
   return (
-    <Frame>
-      <TopBar onNavigate={onNavigate} />
-      <main className="create-page content-container">
-        <PageHeading title="새 스터디 만들기" subtitle="당신의 지적 성장을 이끌어갈 동료들을 찾아보세요." />
-        <Stepper step={step} />
-        <section className="create-card">
-          <h2>{title}</h2>
-          {step === 1 && <BasicForm />}
-          {step === 2 && <RulesForm />}
-          {step === 3 && <ScheduleForm />}
-          <footer className="form-footer">
-            <button className="plain" type="button">× 취소하기</button>
-            <button className="primary" type="button" onClick={() => onNavigate(next)}>
-              {step === 3 ? "완료" : "다음 단계로 이동"} <span>→</span>
-            </button>
-          </footer>
-        </section>
-      </main>
-    </Frame>
+    <main className="create-page content-container">
+      <PageHeading title="새 스터디 만들기" subtitle="당신의 지적 성장을 이끌어갈 동료들을 찾아보세요." />
+      <Stepper step={step} />
+      <section className="create-card">
+        <h2>{title}</h2>
+        {step === 1 && <BasicForm />}
+        {step === 2 && <RulesForm />}
+        {step === 3 && <ScheduleForm />}
+        <footer className="form-footer">
+          <button className="plain" type="button">× 취소하기</button>
+          <button className="primary" type="button" onClick={() => onNavigate(next)}>
+            {step === 3 ? "완료" : "다음 단계로 이동"} <span>→</span>
+          </button>
+        </footer>
+      </section>
+    </main>
   );
 }
 

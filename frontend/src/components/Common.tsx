@@ -8,6 +8,14 @@ import englishStudyIcon from "../assets/english_study.svg";
 import algorithmStudyIcon from "../assets/algorithm_study.svg";
 
 type Navigate = (screen: ScreenId) => void;
+type TopLevelNav = "main" | "explore" | "create" | "mypage";
+
+function getTopLevelNav(screen?: ScreenId): TopLevelNav {
+  if (screen === "mypage") return "mypage";
+  if (screen?.startsWith("create-")) return "create";
+  if (screen === "explore" || screen === "detail") return "explore";
+  return "main";
+}
 
 export function ScreenSwitcher({ current, onChange }: { current: ScreenId; onChange: Navigate }) {
   return (
@@ -26,13 +34,22 @@ export function Frame({ children }: { children: ReactNode }) {
   return <div className="figma-frame">{children}</div>;
 }
 
-export function TopBar({ onNavigate }: { onNavigate: Navigate }) {
+export function TopBar({ current, onNavigate }: { current?: ScreenId; onNavigate: Navigate }) {
+  const activeNav = getTopLevelNav(current);
+  const activeIndex = activeNav === "main" ? 0 : activeNav === "explore" ? 1 : activeNav === "create" ? 2 : 3;
+
   return (
     <header className="topbar">
       <button className="brand-group" type="button" onClick={() => onNavigate("main")}>
         <div className="brand-img"></div>
         <span className="brand-link">StudyMate</span>
       </button>
+      <nav className={`top-nav active-${activeIndex}`} aria-label="주요 화면">
+        <button className={activeNav === "main" ? "active" : ""} type="button" onClick={() => onNavigate("main")}>Home</button>
+        <button className={activeNav === "explore" ? "active" : ""} type="button" onClick={() => onNavigate("explore")}>Search</button>
+        <button className={activeNav === "create" ? "active" : ""} type="button" onClick={() => onNavigate("create-basic")}>Create Study</button>
+        <button className={activeNav === "mypage" ? "active" : ""} type="button" onClick={() => onNavigate("mypage")}>My Page</button>
+      </nav>
       <div className="top-actions">
         <span className="lang-toggle"><b>KR</b><b>EN</b></span>
         <button className="avatar-button" type="button" aria-label="마이페이지로 이동" onClick={() => onNavigate("mypage")}>
@@ -43,15 +60,12 @@ export function TopBar({ onNavigate }: { onNavigate: Navigate }) {
   );
 }
 
-export function Shell({ children, onNavigate, sidebar = false }: { children: ReactNode; onNavigate: Navigate; sidebar?: boolean }) {
+export function Shell({ children, current, onNavigate, sidebar = false }: { children: ReactNode; current?: ScreenId; onNavigate: Navigate; sidebar?: boolean }) {
   return (
-    <Frame>
-      <TopBar onNavigate={onNavigate} />
-      <div className={sidebar ? "app-layout has-sidebar" : "app-layout"}>
-        {sidebar && <StudySideNav />}
-        {children}
-      </div>
-    </Frame>
+    <div className={sidebar ? "app-layout has-sidebar" : "app-layout"}>
+      {sidebar && <StudySideNav />}
+      {children}
+    </div>
   );
 }
 
