@@ -113,6 +113,28 @@ button {
   border-bottom: calc(1px * var(--ui-scale)) solid #e0e5eb;
   background: #fff;
 }
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--ui-scale));
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.brand-img {
+  width: calc(30px * var(--ui-scale));
+  height: calc(30px * var(--ui-scale));
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  mask-image: url("./assets/graduation-cap.svg");
+  -webkit-mask-image: url("./assets/graduation-cap.svg");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+}
 .brand-link {
   border: 0;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);

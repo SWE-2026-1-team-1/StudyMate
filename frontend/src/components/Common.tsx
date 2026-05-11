@@ -1,6 +1,7 @@
 import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
 import type { ReactNode } from "react";
+import graduationCapIcon from "../assets/graduation-cap.svg";
 
 type Navigate = (screen: ScreenId) => void;
 
@@ -24,7 +25,10 @@ export function Frame({ children }: { children: ReactNode }) {
 export function TopBar({ onNavigate }: { onNavigate: Navigate }) {
   return (
     <header className="topbar">
-      <button className="brand-link" type="button" onClick={() => onNavigate("main")}>StudyMate</button>
+      <button className="brand-group" type="button" onClick={() => onNavigate("main")}>
+        <div className="brand-img"></div>
+        <span className="brand-link">StudyMate</span>
+      </button>
       <div className="top-actions">
         <span className="lang-toggle"><b>KR</b><b>EN</b></span>
         <button className="avatar-button" type="button" aria-label="마이페이지로 이동" onClick={() => onNavigate("mypage")}>
