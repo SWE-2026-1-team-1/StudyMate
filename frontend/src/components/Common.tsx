@@ -2,6 +2,7 @@ import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
 import type { ReactNode } from "react";
 import graduationCapIcon from "../assets/graduation-cap.svg";
+import userProfileIcon from "../assets/user_profile.svg";
 
 type Navigate = (screen: ScreenId) => void;
 
@@ -106,15 +107,12 @@ export function StudyCard({ study, action, onAction }: { study: Study; action: s
   );
 }
 
+import studyGroupIcon from "../assets/study_group.svg";
+
 export function Illustration() {
   return (
     <div className="illustration" aria-hidden="true">
-      <span className="person p1" />
-      <span className="person p2" />
-      <span className="person p3" />
-      <span className="person p4" />
-      <span className="person p5" />
-      <i className="table" />
+      <img src={studyGroupIcon} alt="Study Group" className="study-group-icon" />
     </div>
   );
 }
@@ -134,6 +132,10 @@ export function AvatarStack() {
 }
 
 export function Avatar({ name, className = "" }: { name: string; className?: string }) {
+  if (name === "user") {
+    return <img src={userProfileIcon} alt="" className={`avatar user-profile-icon ${className}`} aria-hidden="true" />;
+  }
+
   const initial = name === "user" ? "U" : name.slice(0, 1).toUpperCase();
   return <i className={`avatar portrait-${name} ${className}`} aria-hidden="true">{initial}</i>;
 }
