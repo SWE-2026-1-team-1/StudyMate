@@ -150,20 +150,26 @@ export function MyPage({ onNavigate }: { onNavigate: Navigate }) {
           <button className="primary" type="button">프로필 편집</button>
         </section>
         <section className="profile-grid">
-          <Panel title="참여 중인 스터디">
-            <div className="mini-study-grid">
-              {profile.progressStudies.map((study) => <ProgressStudy key={study.title} {...study} />)}
+          <div className="profile-study-section">
+            <h2>참여 중인 스터디</h2>
+            <div className="profile-content-grid">
+              <div className="profile-left-column">
+                <div className="mini-study-grid">
+                  {profile.progressStudies.map((study) => <ProgressStudy key={study.title} {...study} />)}
+                </div>
+                <Panel title="지원 현황" className="application-panel">
+                  {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
+                </Panel>
+              </div>
+              <Panel title="관심 키워드" className="keyword-panel">
+                <button className="edit-pencil" type="button">✎</button>
+                <div className="keyword-set color">
+                  {profile.interestKeywords.map((tag) => <span key={tag}>{tag}</span>)}
+                </div>
+                <button className="add-tag-button" type="button">+ Add Tag</button>
+              </Panel>
             </div>
-          </Panel>
-          <Panel title="관심 키워드" className="keyword-panel">
-            <button className="edit-pencil" type="button">✎</button>
-            <div className="keyword-set color">
-              {profile.interestKeywords.map((tag) => <span key={tag}>{tag}</span>)}
-            </div>
-          </Panel>
-          <Panel title="지원 현황">
-            {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
-          </Panel>
+          </div>
         </section>
       </main>
     </Frame>
