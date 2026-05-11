@@ -908,6 +908,12 @@ textarea:focus {
   border-radius: calc(22px * var(--ui-scale));
   background: #111827;
 }
+.study-thumb-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .study-thumb.tech {
   background: radial-gradient(
     circle at 50% 70%,

@@ -3,6 +3,9 @@ import type { ScreenId, Study } from "../types";
 import type { ReactNode } from "react";
 import graduationCapIcon from "../assets/graduation-cap.svg";
 import userProfileIcon from "../assets/user_profile.svg";
+import techStudyIcon from "../assets/tech_study.svg";
+import englishStudyIcon from "../assets/english_study.svg";
+import algorithmStudyIcon from "../assets/algorithm_study.svg";
 
 type Navigate = (screen: ScreenId) => void;
 
@@ -141,9 +144,16 @@ export function Avatar({ name, className = "" }: { name: string; className?: str
 }
 
 function StudyThumb({ tone }: { tone: Study["tone"] }) {
+  const thumbByTone: Record<Study["tone"], string> = {
+    tech: techStudyIcon,
+    english: englishStudyIcon,
+    algorithm: algorithmStudyIcon,
+    design: techStudyIcon,
+  };
+
   return (
     <div className={`study-thumb ${tone}`}>
-      <span className="thumb-visual" />
+      <img src={thumbByTone[tone]} alt="" className="study-thumb-image" />
     </div>
   );
 }
