@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Frame, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard, TopBar } from "../components/Common";
-import type { ScreenId } from "../types";
+import type { ProgressStudy as ProgressStudyItem, ScreenId } from "../types";
 
 type Navigate = (screen: ScreenId) => void;
 
@@ -176,13 +176,11 @@ export function MyPage({ onNavigate }: { onNavigate: Navigate }) {
   );
 }
 
-function ProgressStudy({ title, value }: { title: string; value: string }) {
+function ProgressStudy({ title, people, time, value }: ProgressStudyItem) {
   return (
     <article className="progress-study">
-      <span className="icon-tile" />
-      <em>ONGOING</em>
       <b>{title}</b>
-      <p><span>8/10</span><span>Wed 19:00</span></p>
+      <p><span className="meta people">{people}</span><span className="meta time">{time}</span></p>
       <i><strong style={{ width: value }} /></i>
       <small><span>ATTENDANCE</span><span>{value}</span></small>
     </article>

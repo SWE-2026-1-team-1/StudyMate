@@ -34,6 +34,8 @@ export type StudyMember = {
 
 export type ProgressStudy = {
   title: string;
+  people: string;
+  time: string;
   value: string;
 };
 

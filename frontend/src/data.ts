@@ -70,8 +70,8 @@ export const profile = {
   keywords: ["#ProductDesign", "#English_Advanced", "#Startups"],
   interestKeywords: ["UI/UX Design", "AI Research", "Photography", "Startups", "Economics", "Biking"],
   progressStudies: [
-    { title: "심리학으로 풀어보는 UX 분석 스터디", value: "75%" },
-    { title: "TOEFL Speaking 80+ 정복하기", value: "50%" },
+    { title: "심리학으로 풀어보는 UX 분석 스터디", people: "4/6", time: "Wed 19:00", value: "75%" },
+    { title: "TOEFL Speaking 80+ 정복하기", people: "8/10", time: "Sat 14:00", value: "50%" },
   ] satisfies ProgressStudy[],
   applications: [
     { title: "React 프론트엔드 실전 프로젝트", meta: "2일 전 지원함", status: "PENDING" },
