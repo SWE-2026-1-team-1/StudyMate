@@ -1,26 +1,21 @@
 import { attendanceDates, attendanceMembers, joinRequests, teamMembers, teamPosts } from "../data";
 import { Avatar } from "../components/Common";
-import type { ScreenId } from "../types";
-import type { ReactNode } from "react";
 
-type Navigate = (screen: ScreenId) => void;
-type TeamTab = "board" | "attendance" | "members";
-
-export function TeamBoard({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function TeamBoard() {
   return (
-    <TeamShell active="board" current={current} onNavigate={onNavigate}>
+    <>
       <TeamHeader title="Team Board" subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요." />
       <button className="topic-start" type="button">+ Start Topic</button>
       <section className="post-list">
         {teamPosts.map((post, index) => <Post key={`${post.title}-${index}`} {...post} />)}
       </section>
-    </TeamShell>
+    </>
   );
 }
 
-export function TeamAttendance({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function TeamAttendance() {
   return (
-    <TeamShell active="attendance" current={current} onNavigate={onNavigate}>
+    <>
       <TeamHeader title="Attendance Board" subtitle="팀원 출석체크를 관리하세요." />
       <section className="attendance-card">
         <div className="attendance-row head">
@@ -35,13 +30,13 @@ export function TeamAttendance({ current, onNavigate }: { current: ScreenId; onN
         ))}
         <footer><span className="present">Present</span><span className="absent">Absent</span><span className="scheduled">Scheduled</span></footer>
       </section>
-    </TeamShell>
+    </>
   );
 }
 
-export function TeamMembers({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function TeamMembers() {
   return (
-    <TeamShell active="members" current={current} onNavigate={onNavigate}>
+    <>
       <TeamHeader title="Member Board" subtitle="스터디 팀원을 관리하세요." hideCount />
       <section className="member-table">
         <header><h2>Active Members</h2><span>Total: 3</span></header>
@@ -70,21 +65,7 @@ export function TeamMembers({ current, onNavigate }: { current: ScreenId; onNavi
         ))}
         <button className="invite-link" type="button">초대 링크</button>
       </section>
-    </TeamShell>
-  );
-}
-
-function TeamShell({ active, current, onNavigate, children }: { active: TeamTab; current: ScreenId; onNavigate: Navigate; children: ReactNode }) {
-  return (
-    <div className="team-shell">
-      <aside className="team-nav">
-        <div className="team-logo"><span>✣</span><b>파이썬 스터디</b><small>CS302 PROJECT</small></div>
-        <button className={active === "board" ? "active" : ""} type="button" onClick={() => onNavigate("team-board")}><span>▦</span>게시판</button>
-        <button className={active === "attendance" ? "active" : ""} type="button" onClick={() => onNavigate("team-attendance")}><span>◎</span>출석체크</button>
-        <button className={active === "members" ? "active" : ""} type="button" onClick={() => onNavigate("team-members")}><span>♟</span>팀원관리</button>
-      </aside>
-      <main className="team-content content-container">{children}</main>
-    </div>
+    </>
   );
 }
 

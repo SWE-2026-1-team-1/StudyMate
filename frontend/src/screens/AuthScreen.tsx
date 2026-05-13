@@ -1,12 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authInterestTags } from "../data";
 import { TagList } from "../components/TagInput";
 import { AvatarStack, Field } from "../components/Common";
-import type { ScreenId } from "../types";
+import { ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
 import globeIcon from "../assets/Icon.svg";
-
-type Navigate = (screen: ScreenId) => void;
 
 type Language = { code: string; label: string };
 const LANGUAGES: Language[] = [
@@ -15,7 +14,8 @@ const LANGUAGES: Language[] = [
   { code: "ZH", label: "中文" },
 ];
 
-export function AuthScreen({ mode, onNavigate }: { mode: "login" | "signup"; onNavigate: Navigate }) {
+export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
+  const navigate = useNavigate();
   const isLogin = mode === "login";
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -60,7 +60,7 @@ export function AuthScreen({ mode, onNavigate }: { mode: "login" | "signup"; onN
                 className={isLogin ? "active" : ""} 
                 type="button" 
                 onClick={() => {
-                  onNavigate("login");
+                  navigate(ROUTE_PATHS.login);
                   setSignupStep(1);
                 }}
               >
@@ -70,7 +70,7 @@ export function AuthScreen({ mode, onNavigate }: { mode: "login" | "signup"; onN
                 className={!isLogin ? "active" : ""} 
                 type="button" 
                 onClick={() => {
-                  onNavigate("signup");
+                  navigate(ROUTE_PATHS.signup);
                   setSignupStep(1);
                 }}
               >
@@ -116,13 +116,13 @@ export function AuthScreen({ mode, onNavigate }: { mode: "login" | "signup"; onN
               <form className="form-stack" onSubmit={(event) => event.preventDefault()}>
                 <Field label="대학교 이메일" placeholder="studymate@ajou.ac.kr" icon="@" />
                 <Field label="비밀번호" placeholder="********" type="password" autoComplete="current-password" />
-                <button className="primary wide" type="button" onClick={() => onNavigate("main")}>
+                <button className="primary wide" type="button" onClick={() => navigate(ROUTE_PATHS.home)}>
                   로그인 <span>→</span>
                 </button>
               </form>
               <footer className="auth-footer">
                 <p>계정이 없으신가요? <button type="button" onClick={() => {
-                  onNavigate("signup");
+                  navigate(ROUTE_PATHS.signup);
                   setSignupStep(1);
                 }}>지금 가입하세요</button></p>
               </footer>
@@ -155,7 +155,7 @@ export function AuthScreen({ mode, onNavigate }: { mode: "login" | "signup"; onN
                   <button className="secondary wide" type="button" onClick={() => setSignupStep(1)}>
                     이전 단계
                   </button>
-                  <button className="primary wide" type="button" onClick={() => onNavigate("main")}>
+                  <button className="primary wide" type="button" onClick={() => navigate(ROUTE_PATHS.home)}>
                     회원가입 완료 <span>→</span>
                   </button>
                 </div>

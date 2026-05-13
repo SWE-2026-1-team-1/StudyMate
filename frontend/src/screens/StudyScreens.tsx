@@ -1,39 +1,40 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
-import type { ProgressStudy as ProgressStudyItem, ScreenId } from "../types";
+import { ROUTE_PATHS } from "../routes/routingMap";
+import type { ProgressStudy as ProgressStudyItem } from "../types";
 
-type Navigate = (screen: ScreenId) => void;
-
-export function MainDashboard({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function MainDashboard() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const isSearching = searchQuery.trim().length > 0;
 
   return (
-    <Shell current={current} onNavigate={onNavigate}>
+    <Shell>
       <section className="dashboard-main content-container">
         <Hero searchValue={searchQuery} onSearchChange={setSearchQuery} />
-        {isSearching ? <ExploreResults onNavigate={onNavigate} /> : <MainDashboardContent onNavigate={onNavigate} />}
+        {isSearching ? <ExploreResults /> : <MainDashboardContent onNavigate={navigate} />}
       </section>
     </Shell>
   );
 }
 
-export function ExplorePage({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function ExplorePage() {
   return (
-    <Shell current={current} onNavigate={onNavigate}>
+    <Shell>
       <section className="explore-page content-container">
         <label className="search-box explore-search">
           <i />
           <input placeholder="관심 있는 스터디 주제나 기술 스택을 검색해보세요" />
         </label>
-        <ExploreResults onNavigate={onNavigate} />
+        <ExploreResults />
       </section>
     </Shell>
   );
 }
 
-function MainDashboardContent({ onNavigate }: { onNavigate: Navigate }) {
+function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof useNavigate> }) {
   return (
     <div className="dashboard-content-panel">
       <section className="callout-card">
@@ -41,21 +42,23 @@ function MainDashboardContent({ onNavigate }: { onNavigate: Navigate }) {
           <span className="badge">New</span>
           <h2>나만의 스터디를 만들고 함께 성장할 팀원을 모집하세요</h2>
           <p>목표, 일정, 모집 인원을 설정하고 팀원 모집부터 운영까지 한곳에서 관리할 수 있습니다.</p>
-          <button className="primary" type="button" onClick={() => onNavigate("create-basic")}>스터디 만들기</button>
+          <button className="primary" type="button" onClick={() => onNavigate(ROUTE_PATHS.createBasic)}>스터디 만들기</button>
         </div>
         <Illustration />
       </section>
       <section className="section-block">
         <SectionTitle title="My Study" action="전체 보기  →" />
         <div className="study-grid">
-          {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => onNavigate("team-board")} />)}
+          {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => onNavigate(ROUTE_PATHS.teamBoard())} />)}
         </div>
       </section>
     </div>
   );
 }
 
-function ExploreResults({ onNavigate }: { onNavigate: Navigate }) {
+function ExploreResults() {
+  const navigate = useNavigate();
+
   return (
     <div className="dashboard-content-panel">
       <TopicScroller />
@@ -63,7 +66,7 @@ function ExploreResults({ onNavigate }: { onNavigate: Navigate }) {
         <SectionTitle title="관심사 기반 추천 스터디" subtitle="관심사 기반으로 선별한 스터디 그룹입니다." action="전체 보기  →" />
         <div className="study-grid explore-grid">
           {exploreStudies.map((study, index) => (
-            <StudyCard key={`${study.title}-${index}`} study={study} action="신청하기" onAction={() => onNavigate("detail")} />
+            <StudyCard key={`${study.title}-${index}`} study={study} action="신청하기" onAction={() => navigate(ROUTE_PATHS.studyDetail())} />
           ))}
         </div>
       </section>
@@ -88,9 +91,9 @@ function TopicScroller() {
   );
 }
 
-export function StudyDetail({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function StudyDetail() {
   return (
-    <Shell current={current} onNavigate={onNavigate}>
+    <Shell>
       <section className="detail-page content-container">
         <div className="detail-top">
           <div>
@@ -134,7 +137,7 @@ export function StudyDetail({ current, onNavigate }: { current: ScreenId; onNavi
   );
 }
 
-export function MyPage({ current, onNavigate }: { current: ScreenId; onNavigate: Navigate }) {
+export function MyPage() {
   return (
     <main className="profile-page content-container">
       <section className="profile-hero">
@@ -184,8 +187,9 @@ function ProgressStudy({ title, people, time, value }: ProgressStudyItem) {
   );
 }
 
-export function CreateStudy({ current, step, onNavigate }: { current: ScreenId; step: 1 | 2 | 3; onNavigate: Navigate }) {
-  const next = step === 1 ? "create-rules" : step === 2 ? "create-schedule" : "main";
+export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
+  const navigate = useNavigate();
+  const next = step === 1 ? ROUTE_PATHS.createRules : step === 2 ? ROUTE_PATHS.createSchedule : ROUTE_PATHS.home;
   const title = step === 1 ? "기본 정보를 입력해주세요" : step === 2 ? "규칙 및 태그를 입력해주세요" : "일정 설정";
 
   return (
@@ -199,7 +203,7 @@ export function CreateStudy({ current, step, onNavigate }: { current: ScreenId; 
         {step === 3 && <ScheduleForm />}
         <footer className="form-footer">
           <button className="plain" type="button">× 취소하기</button>
-          <button className="primary" type="button" onClick={() => onNavigate(next)}>
+          <button className="primary" type="button" onClick={() => navigate(next)}>
             {step === 3 ? "완료" : "다음 단계로 이동"} <span>→</span>
           </button>
         </footer>

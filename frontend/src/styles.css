@@ -119,8 +119,10 @@ button {
   gap: calc(10px * var(--ui-scale));
   border: 0;
   background: transparent;
+  color: inherit;
   cursor: pointer;
   padding: 0;
+  text-decoration: none;
 }
 .top-nav {
   display: flex;
@@ -167,7 +169,7 @@ button {
   --nav-indicator-width: var(--nav-page-width);
   --nav-track-x: calc(var(--nav-home-width) + var(--nav-search-width) + var(--nav-create-width) + var(--nav-gap) * 3);
 }
-.top-nav button {
+.top-nav a {
   position: relative;
   z-index: 1;
   border: 0;
@@ -177,22 +179,24 @@ button {
   color: #64748b;
   font-size: calc(15px * var(--ui-scale));
   font-weight: 700;
+  text-align: center;
+  text-decoration: none;
   white-space: nowrap;
   transition: color 180ms ease;
 }
-.top-nav button:nth-of-type(1) {
+.top-nav a:nth-of-type(1) {
   width: var(--nav-home-width);
 }
-.top-nav button:nth-of-type(2) {
+.top-nav a:nth-of-type(2) {
   width: var(--nav-search-width);
 }
-.top-nav button:nth-of-type(3) {
+.top-nav a:nth-of-type(3) {
   width: var(--nav-create-width);
 }
-.top-nav button:nth-of-type(4) {
+.top-nav a:nth-of-type(4) {
   width: var(--nav-page-width);
 }
-.top-nav button + button::after {
+.top-nav a + a::after {
   position: absolute;
   top: 50%;
   left: calc(var(--nav-gap) / -2);
@@ -203,12 +207,12 @@ button {
   transition: opacity 180ms ease;
   content: "";
 }
-.top-nav button.active::after,
-.top-nav button.active + button::after {
+.top-nav a.active::after,
+.top-nav a.active + a::after {
   opacity: 0;
 }
-.top-nav button:hover,
-.top-nav button.active {
+.top-nav a:hover,
+.top-nav a.active {
   color: var(--purple);
 }
 .brand-img {
@@ -250,6 +254,7 @@ button {
   border-radius: 50%;
   padding: 0;
   background: transparent;
+  text-decoration: none;
 }
 .user-profile-icon {
   display: block;
@@ -1814,7 +1819,7 @@ textarea:focus {
   font-size: calc(14px * var(--ui-scale));
   font-weight: 700;
 }
-.team-nav button {
+.team-nav a {
   display: flex;
   align-items: center;
   gap: calc(18px * var(--ui-scale));
@@ -1828,6 +1833,7 @@ textarea:focus {
   font-size: calc(18px * var(--ui-scale));
   font-weight: 700;
   text-align: left;
+  text-decoration: none;
 }
 .team-nav .active {
   border-left: calc(5px * var(--ui-scale)) solid var(--purple-2);
@@ -2198,7 +2204,7 @@ textarea:focus {
     --nav-create-width: calc(116px * var(--ui-scale));
     --nav-page-width: calc(88px * var(--ui-scale));
   }
-  .top-nav button {
+  .top-nav a {
     padding: calc(9px * var(--ui-scale)) calc(12px * var(--ui-scale));
   }
   .lang-toggle b {
