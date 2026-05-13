@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;NON_KEYWORDS=USER
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  mail:
+    host: localhost
+    port: 25
+
+jwt:
+  secret: test-secret-key-for-testing-purposes-at-least-32-chars
+  access-expiration-ms: 300000     # 5분 (테스트용)
+  refresh-expiration-ms: 86400000  # 24시간 (테스트용)
