@@ -40,3 +40,16 @@ jobs:
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
             "sudo systemctl restart studymate && sudo systemctl status studymate --no-pager"
+
+      - name: 헬스체크
+        run: |
+          for i in {1..12}; do
+            if curl -sf http://${{ secrets.EC2_HOST }}:8080/actuator/health; then
+              echo "헬스체크 통과"
+              exit 0
+            fi
+            echo "대기 중... ($i/12)"
+            sleep 10
+          done
+          echo "헬스체크 실패 — 서비스 기동 확인 필요"
+          exit 1
