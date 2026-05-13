@@ -21,22 +21,22 @@ CREATE DATABASE studymate
 USE studymate;
 
 -- ================================================================
--- 1. 用户表
+-- 1. 사용자 테이블
 -- ================================================================
 CREATE TABLE app_user (
-    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '用户编号',
-    email               VARCHAR(255)    NOT NULL COMMENT '登录邮箱',
-    password_hash       VARCHAR(255)    NOT NULL COMMENT '哈希密码 (BCrypt)',
-    name                VARCHAR(100)    NOT NULL COMMENT '姓名',
-    is_email_verified   TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '邮箱是否已验证 (signup 시 서비스가 1로 설정)',
-    is_deleted          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否软删除',
-    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '사용자 번호',
+    email               VARCHAR(255)    NOT NULL COMMENT '로그인 이메일',
+    password_hash       VARCHAR(255)    NOT NULL COMMENT '해시 비밀번호 (BCrypt)',
+    name                VARCHAR(100)    NOT NULL COMMENT '이름',
+    is_email_verified   TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '이메일 인증 여부 (signup 시 서비스가 1로 설정)',
+    is_deleted          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '소프트 삭제 여부',
+    created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_app_user_email (email),
     KEY idx_app_user_deleted_created (is_deleted, created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 테이블';
 
 -- ================================================================
 -- 1-A. 이메일 인증 (D-005, P-001 신규)
@@ -87,61 +87,61 @@ CREATE TABLE refresh_token (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Refresh Token 저장소 (D-001/D-002, P-001)';
 
 -- ================================================================
--- 2. 标签表
+-- 2. 태그 테이블
 -- ================================================================
 CREATE TABLE tag (
-    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '标签编号',
-    name        VARCHAR(100)    NOT NULL COMMENT '标签名称',
-    category    VARCHAR(50)     NOT NULL COMMENT '标签分类',
-    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '태그 번호',
+    name        VARCHAR(100)    NOT NULL COMMENT '태그명',
+    category    VARCHAR(50)     NOT NULL COMMENT '태그 분류',
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_tag_name (name),
     KEY idx_tag_category_name (category, name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='标签表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='태그 테이블';
 
 -- ================================================================
--- 3. 小组角色表：比 ENUM 更容易扩展权限
+-- 3. 스터디 역할 테이블: ENUM 보다 권한 확장이 용이
 -- ================================================================
 CREATE TABLE study_role (
-    code                     VARCHAR(30) NOT NULL COMMENT '角色编码',
-    name                     VARCHAR(50) NOT NULL COMMENT '角色名称',
-    sort_order               TINYINT UNSIGNED NOT NULL DEFAULT 99 COMMENT '排序值',
-    can_approve_application  TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否可审批申请',
-    can_manage_member        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否可管理成员',
-    can_create_attendance    TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否可创建出勤场次',
-    can_post_notice          TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否可发布公告',
-    created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    code                     VARCHAR(30) NOT NULL COMMENT '역할 코드',
+    name                     VARCHAR(50) NOT NULL COMMENT '역할명',
+    sort_order               TINYINT UNSIGNED NOT NULL DEFAULT 99 COMMENT '정렬값',
+    can_approve_application  TINYINT(1) NOT NULL DEFAULT 0 COMMENT '신청 승인 가능 여부',
+    can_manage_member        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '멤버 관리 가능 여부',
+    can_create_attendance    TINYINT(1) NOT NULL DEFAULT 0 COMMENT '출석 세션 생성 가능 여부',
+    can_post_notice          TINYINT(1) NOT NULL DEFAULT 0 COMMENT '공지 게시 가능 여부',
+    created_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='小组角色与权限表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='스터디 역할 및 권한 테이블';
 
 -- ================================================================
--- 4. 用户语言表
+-- 4. 사용자 언어 테이블
 -- ================================================================
 CREATE TABLE user_language (
-    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '用户语言编号',
-    user_id     BIGINT UNSIGNED NOT NULL COMMENT '用户编号',
-    language    VARCHAR(50)     NOT NULL COMMENT '可用语言',
-    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '사용자 언어 번호',
+    user_id     BIGINT UNSIGNED NOT NULL COMMENT '사용자 번호',
+    language    VARCHAR(50)     NOT NULL COMMENT '사용 가능 언어',
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_user_language (user_id, language),
     CONSTRAINT fk_user_language_user
         FOREIGN KEY (user_id) REFERENCES app_user (id)
         ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户语言表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 언어 테이블';
 
 -- ================================================================
--- 5. 用户标签表
+-- 5. 사용자 태그 테이블
 -- ================================================================
 CREATE TABLE user_tag (
-    user_id     BIGINT UNSIGNED NOT NULL COMMENT '用户编号',
-    tag_id      BIGINT UNSIGNED NOT NULL COMMENT '标签编号',
-    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    user_id     BIGINT UNSIGNED NOT NULL COMMENT '사용자 번호',
+    tag_id      BIGINT UNSIGNED NOT NULL COMMENT '태그 번호',
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
 
     PRIMARY KEY (user_id, tag_id),
     KEY idx_user_tag_tag (tag_id),
@@ -151,39 +151,39 @@ CREATE TABLE user_tag (
     CONSTRAINT fk_user_tag_tag
         FOREIGN KEY (tag_id) REFERENCES tag (id)
         ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户标签表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 태그 테이블';
 
 -- ================================================================
--- 6. 学习小组表
---   - 不再保存 leader_id：当前组长由 study_member 中的活跃 LEADER 记录表示
+-- 6. 스터디 테이블
+--   - leader_id 미저장: 현재 조장은 study_member 의 활성 LEADER 기록으로 표현
 --   - current_member_count: 서비스 레이어가 가입/탈퇴 트랜잭션 안에서 유지
 --     (D-003: 트리거 제거. 정원 초과 방지는 SELECT ... FOR UPDATE 또는 낙관적 락으로)
 -- ================================================================
 CREATE TABLE study (
-    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '学习小组编号',
-    title                 VARCHAR(200)    NOT NULL COMMENT '标题',
-    purpose               TEXT            NOT NULL COMMENT '目的描述',
-    max_members           TINYINT UNSIGNED NOT NULL DEFAULT 10 COMMENT '最大成员数',
-    current_member_count  TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '当前活跃成员数 (서비스 레이어 유지, D-003)',
-    activity_cycle        VARCHAR(100)    NOT NULL COMMENT '活动频率',
-    status                ENUM('OPEN','CLOSED','CANCELLED') NOT NULL DEFAULT 'OPEN' COMMENT '招募状态',
-    is_deleted            TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否软删除',
-    created_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '스터디 번호',
+    title                 VARCHAR(200)    NOT NULL COMMENT '제목',
+    purpose               TEXT            NOT NULL COMMENT '목적 설명',
+    max_members           TINYINT UNSIGNED NOT NULL DEFAULT 10 COMMENT '최대 멤버 수',
+    current_member_count  TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '현재 활성 멤버 수 (서비스 레이어 유지, D-003)',
+    activity_cycle        VARCHAR(100)    NOT NULL COMMENT '활동 빈도',
+    status                ENUM('OPEN','CLOSED','CANCELLED') NOT NULL DEFAULT 'OPEN' COMMENT '모집 상태',
+    is_deleted            TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '소프트 삭제 여부',
+    created_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     KEY idx_study_status_deleted_created (status, is_deleted, created_at),
     KEY idx_study_created (created_at),
     FULLTEXT KEY ft_study_title_purpose (title, purpose)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习小组表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='스터디 테이블';
 
 -- ================================================================
--- 7. 小组标签表
+-- 7. 스터디 태그 테이블
 -- ================================================================
 CREATE TABLE study_tag (
-    study_id    BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    tag_id      BIGINT UNSIGNED NOT NULL COMMENT '标签编号',
-    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    study_id    BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    tag_id      BIGINT UNSIGNED NOT NULL COMMENT '태그 번호',
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
 
     PRIMARY KEY (study_id, tag_id),
     KEY idx_study_tag_tag (tag_id),
@@ -193,10 +193,10 @@ CREATE TABLE study_tag (
     CONSTRAINT fk_study_tag_tag
         FOREIGN KEY (tag_id) REFERENCES tag (id)
         ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习小组标签表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='스터디 태그 테이블';
 
 -- ================================================================
--- 8. 小组成员表：보존형 히스토리 (탈퇴 시 row 삭제 대신 is_active=0)
+-- 8. 스터디 멤버 테이블: 보존형 히스토리 (탈퇴 시 row 삭제 대신 is_active=0)
 --   (서비스 레이어 담당)
 --     - 활성 멤버 유일성: 같은 (study_id, user_id) 에 is_active=1 row 1건만 허용
 --     - 활성 리더 유일성: 같은 study_id 에 role_code='LEADER' AND is_active=1 row 1건만 허용
@@ -207,16 +207,16 @@ CREATE TABLE study_tag (
 --   합성 외래키 참조용으로 유지.
 -- ================================================================
 CREATE TABLE study_member (
-    id                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '成员记录编号',
-    study_id                BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    user_id                 BIGINT UNSIGNED NOT NULL COMMENT '用户编号',
-    role_code               VARCHAR(30)     NOT NULL DEFAULT 'MEMBER' COMMENT '角色编码',
-    is_active               TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否为活跃成员',
-    joined_at               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
-    left_at                 DATETIME        DEFAULT NULL COMMENT '退出时间',
-    left_reason             ENUM('VOLUNTARY','KICKED','STUDY_CLOSED') DEFAULT NULL COMMENT '退出原因',
-    created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '멤버 기록 번호',
+    study_id                BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    user_id                 BIGINT UNSIGNED NOT NULL COMMENT '사용자 번호',
+    role_code               VARCHAR(30)     NOT NULL DEFAULT 'MEMBER' COMMENT '역할 코드',
+    is_active               TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '활성 멤버 여부',
+    joined_at               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '가입 시각',
+    left_at                 DATETIME        DEFAULT NULL COMMENT '탈퇴 시각',
+    left_reason             ENUM('VOLUNTARY','KICKED','STUDY_CLOSED') DEFAULT NULL COMMENT '탈퇴 사유',
+    created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_member_id_study (id, study_id),
@@ -233,10 +233,10 @@ CREATE TABLE study_member (
     CONSTRAINT fk_member_role
         FOREIGN KEY (role_code) REFERENCES study_role (code)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习小组成员表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='스터디 멤버 테이블';
 
 -- ================================================================
--- 9. 申请表：히스토리 보존
+-- 9. 신청 테이블: 히스토리 보존
 --   (서비스 레이어 담당)
 --     - 같은 (study_id, applicant_id) 에 status='PENDING' row 1건만 허용
 --     - PENDING 가 아닌 row 의 status 변경 금지 (한 번 처리되면 종결)
@@ -247,17 +247,17 @@ CREATE TABLE study_member (
 --   idx_application_id_study (uq_application_id_study) 는 notification 의 합성 외래키 참조용으로 유지.
 -- ================================================================
 CREATE TABLE application (
-    id                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '申请编号',
-    study_id                BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    applicant_id            BIGINT UNSIGNED NOT NULL COMMENT '申请人编号',
-    status                  ENUM('PENDING','ACCEPTED','REJECTED') NOT NULL DEFAULT 'PENDING' COMMENT '申请状态',
-    message                 VARCHAR(500) DEFAULT NULL COMMENT '申请留言',
-    applied_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
-    processed_at            DATETIME DEFAULT NULL COMMENT '处理时间',
-    processed_by_member_id  BIGINT UNSIGNED DEFAULT NULL COMMENT '审批成员编号',
-    reject_reason           VARCHAR(500) DEFAULT NULL COMMENT '拒绝原因',
-    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '신청 번호',
+    study_id                BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    applicant_id            BIGINT UNSIGNED NOT NULL COMMENT '신청인 번호',
+    status                  ENUM('PENDING','ACCEPTED','REJECTED') NOT NULL DEFAULT 'PENDING' COMMENT '신청 상태',
+    message                 VARCHAR(500) DEFAULT NULL COMMENT '신청 메시지',
+    applied_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '신청 시각',
+    processed_at            DATETIME DEFAULT NULL COMMENT '처리 시각',
+    processed_by_member_id  BIGINT UNSIGNED DEFAULT NULL COMMENT '승인 멤버 번호',
+    reject_reason           VARCHAR(500) DEFAULT NULL COMMENT '거절 사유',
+    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_application_id_study (id, study_id),
@@ -274,25 +274,25 @@ CREATE TABLE application (
     CONSTRAINT fk_application_processor
         FOREIGN KEY (processed_by_member_id, study_id) REFERENCES study_member (id, study_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习小组申请表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='스터디 신청 테이블';
 
 -- ================================================================
--- 10. 通知表
+-- 10. 알림 테이블
 -- ================================================================
 CREATE TABLE notification (
-    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '通知编号',
-    receiver_id          BIGINT UNSIGNED NOT NULL COMMENT '接收人编号',
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '알림 번호',
+    receiver_id          BIGINT UNSIGNED NOT NULL COMMENT '수신인 번호',
     type                ENUM('APPLICATION_SUBMITTED','APPLICATION_ACCEPTED','APPLICATION_REJECTED','STUDY_NOTICE','COMMENT_REPLY','SYSTEM')
-                        NOT NULL DEFAULT 'SYSTEM' COMMENT '通知类型',
-    message             VARCHAR(500) NOT NULL COMMENT '通知内容',
-    is_read             TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已读',
-    read_at             DATETIME DEFAULT NULL COMMENT '阅读时间',
-    ref_study_id        BIGINT UNSIGNED DEFAULT NULL COMMENT '关联学习小组编号',
-    ref_application_id  BIGINT UNSIGNED DEFAULT NULL COMMENT '关联申请编号',
-    ref_post_id         BIGINT UNSIGNED DEFAULT NULL COMMENT '关联帖子编号',
-    ref_comment_id      BIGINT UNSIGNED DEFAULT NULL COMMENT '关联评论编号',
-    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                        NOT NULL DEFAULT 'SYSTEM' COMMENT '알림 유형',
+    message             VARCHAR(500) NOT NULL COMMENT '알림 내용',
+    is_read             TINYINT(1) NOT NULL DEFAULT 0 COMMENT '읽음 여부',
+    read_at             DATETIME DEFAULT NULL COMMENT '읽은 시각',
+    ref_study_id        BIGINT UNSIGNED DEFAULT NULL COMMENT '연관 스터디 번호',
+    ref_application_id  BIGINT UNSIGNED DEFAULT NULL COMMENT '연관 신청 번호',
+    ref_post_id         BIGINT UNSIGNED DEFAULT NULL COMMENT '연관 게시글 번호',
+    ref_comment_id      BIGINT UNSIGNED DEFAULT NULL COMMENT '연관 댓글 번호',
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     KEY idx_notification_receiver_read_created (receiver_id, is_read, created_at),
@@ -309,22 +309,22 @@ CREATE TABLE notification (
     CONSTRAINT fk_notification_application
         FOREIGN KEY (ref_application_id) REFERENCES application (id)
         ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='알림 테이블';
 
 -- ================================================================
--- 11. 出勤场次表
+-- 11. 출석 세션 테이블
 --   (서비스 레이어 담당) created_by_member_id 가 해당 study 의 활성 멤버이고
 --                          can_create_attendance 권한 보유한지 확인.
 -- ================================================================
 CREATE TABLE attendance_session (
-    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '出勤场次编号',
-    study_id              BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    session_num           TINYINT UNSIGNED NOT NULL COMMENT '场次编号',
-    session_date          DATE NOT NULL COMMENT '活动日期',
-    title                 VARCHAR(200) DEFAULT NULL COMMENT '场次标题',
-    created_by_member_id  BIGINT UNSIGNED NOT NULL COMMENT '创建成员编号',
-    created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '출석 세션 번호',
+    study_id              BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    session_num           TINYINT UNSIGNED NOT NULL COMMENT '세션 번호',
+    session_date          DATE NOT NULL COMMENT '활동 일자',
+    title                 VARCHAR(200) DEFAULT NULL COMMENT '세션 제목',
+    created_by_member_id  BIGINT UNSIGNED NOT NULL COMMENT '생성 멤버 번호',
+    created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_attendance_session_num (study_id, session_num),
@@ -336,24 +336,24 @@ CREATE TABLE attendance_session (
     CONSTRAINT fk_attendance_session_creator
         FOREIGN KEY (created_by_member_id, study_id) REFERENCES study_member (id, study_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='出勤场次表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='출석 세션 테이블';
 
 -- ================================================================
--- 12. 出勤明细表
+-- 12. 출석 기록 테이블
 --   합성 외래키 (session_id, study_id) / (member_id, study_id) 로
 --   A 스터디 세션에 B 스터디 멤버가 기록되는 것을 DB 레벨에서 차단.
 --   (서비스 레이어 담당) member 가 여전히 활성 멤버인지 확인.
 -- ================================================================
 CREATE TABLE attendance_record (
-    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '出勤记录编号',
-    study_id    BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    session_id  BIGINT UNSIGNED NOT NULL COMMENT '出勤场次编号',
-    member_id   BIGINT UNSIGNED NOT NULL COMMENT '成员记录编号',
-    status      ENUM('PRESENT','ABSENT','LATE') NOT NULL DEFAULT 'ABSENT' COMMENT '出勤状态',
-    note        VARCHAR(300) DEFAULT NULL COMMENT '备注',
-    checked_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登记时间',
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '출석 기록 번호',
+    study_id    BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    session_id  BIGINT UNSIGNED NOT NULL COMMENT '출석 세션 번호',
+    member_id   BIGINT UNSIGNED NOT NULL COMMENT '멤버 기록 번호',
+    status      ENUM('PRESENT','ABSENT','LATE') NOT NULL DEFAULT 'ABSENT' COMMENT '출석 상태',
+    note        VARCHAR(300) DEFAULT NULL COMMENT '비고',
+    checked_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '등록 시각',
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_attendance_record_session_member (session_id, member_id),
@@ -365,23 +365,23 @@ CREATE TABLE attendance_record (
     CONSTRAINT fk_attendance_record_member
         FOREIGN KEY (member_id, study_id) REFERENCES study_member (id, study_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='出勤明细表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='출석 기록 테이블';
 
 -- ================================================================
--- 13. 帖子表
+-- 13. 게시글 테이블
 --   (서비스 레이어 담당) author 가 활성 멤버인지 / NOTICE 작성은 can_post_notice 권한 보유 여부 확인.
 -- ================================================================
 CREATE TABLE post (
-    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '帖子编号',
-    study_id          BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    author_member_id  BIGINT UNSIGNED NOT NULL COMMENT '作者成员编号',
-    type              ENUM('NOTICE','FREE') NOT NULL DEFAULT 'FREE' COMMENT '帖子类型',
-    title             VARCHAR(300) NOT NULL COMMENT '标题',
-    content           TEXT NOT NULL COMMENT '正文',
-    is_deleted        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否软删除',
-    deleted_at        DATETIME DEFAULT NULL COMMENT '删除时间',
-    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
-    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '게시글 번호',
+    study_id          BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    author_member_id  BIGINT UNSIGNED NOT NULL COMMENT '작성자 멤버 번호',
+    type              ENUM('NOTICE','FREE') NOT NULL DEFAULT 'FREE' COMMENT '게시글 유형',
+    title             VARCHAR(300) NOT NULL COMMENT '제목',
+    content           TEXT NOT NULL COMMENT '본문',
+    is_deleted        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '소프트 삭제 여부',
+    deleted_at        DATETIME DEFAULT NULL COMMENT '삭제 시각',
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '게시 시각',
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_post_id_study (id, study_id),
@@ -394,22 +394,22 @@ CREATE TABLE post (
     CONSTRAINT fk_post_author_member
         FOREIGN KEY (author_member_id, study_id) REFERENCES study_member (id, study_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='帖子表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='게시글 테이블';
 
 -- ================================================================
--- 14. 评论表
+-- 14. 댓글 테이블
 --   (서비스 레이어 담당) author 가 활성 멤버인지 / 대상 post 가 미삭제 상태인지 확인.
 -- ================================================================
 CREATE TABLE post_comment (
-    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '评论编号',
-    study_id          BIGINT UNSIGNED NOT NULL COMMENT '学习小组编号',
-    post_id           BIGINT UNSIGNED NOT NULL COMMENT '帖子编号',
-    author_member_id  BIGINT UNSIGNED NOT NULL COMMENT '作者成员编号',
-    content           TEXT NOT NULL COMMENT '评论内容',
-    is_deleted        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否软删除',
-    deleted_at        DATETIME DEFAULT NULL COMMENT '删除时间',
-    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
-    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '댓글 번호',
+    study_id          BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    post_id           BIGINT UNSIGNED NOT NULL COMMENT '게시글 번호',
+    author_member_id  BIGINT UNSIGNED NOT NULL COMMENT '작성자 멤버 번호',
+    content           TEXT NOT NULL COMMENT '댓글 내용',
+    is_deleted        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '소프트 삭제 여부',
+    deleted_at        DATETIME DEFAULT NULL COMMENT '삭제 시각',
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '게시 시각',
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
     PRIMARY KEY (id),
     KEY idx_comment_post_deleted_created (post_id, is_deleted, created_at),
@@ -420,7 +420,7 @@ CREATE TABLE post_comment (
     CONSTRAINT fk_comment_author_member
         FOREIGN KEY (author_member_id, study_id) REFERENCES study_member (id, study_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='댓글 테이블';
 
 -- notification 의 post / comment 외래키는 두 테이블 생성 이후 추가
 ALTER TABLE notification
@@ -439,22 +439,22 @@ ALTER TABLE notification
 
 
 -- ================================================================
--- 样本数据 (트리거 제거에 따라 명시 INSERT 로 일관성 유지)
+-- 샘플 데이터 (트리거 제거에 따라 명시 INSERT 로 일관성 유지)
 --   - 이전엔 application ACCEPTED 트리거가 study_member 를 자동 생성
 --     → 이제는 (8) 에 명시 INSERT
 --   - 이전엔 study_member INSERT 트리거가 study.current_member_count 를 증분
 --     → 이제는 (6) study INSERT 시 정확한 값으로 박음
 -- ================================================================
 
--- 1. 角色
+-- 1. 역할
 INSERT INTO study_role
 (code, name, sort_order, can_approve_application, can_manage_member, can_create_attendance, can_post_notice) VALUES
-('LEADER',    '组长',   1, 1, 1, 1, 1),
-('CO_LEADER', '副组长', 2, 1, 1, 1, 1),
-('OPERATOR',  '运营者', 3, 0, 1, 1, 1),
-('MEMBER',    '普通成员', 9, 0, 0, 0, 0);
+('LEADER',    '조장',      1, 1, 1, 1, 1),
+('CO_LEADER', '부조장',    2, 1, 1, 1, 1),
+('OPERATOR',  '운영자',    3, 0, 1, 1, 1),
+('MEMBER',    '일반 멤버', 9, 0, 0, 0, 0);
 
--- 2. 用户
+-- 2. 사용자
 INSERT INTO app_user (id, email, password_hash, name, is_email_verified) VALUES
 (1,  'alice@university.ac.kr',   '$2b$12$exampleHashAlice',   'Alice Kim',     1),
 (2,  'bob@university.ac.kr',     '$2b$12$exampleHashBob',     'Bob Lee',        1),
@@ -467,7 +467,7 @@ INSERT INTO app_user (id, email, password_hash, name, is_email_verified) VALUES
 (9,  'ivan@university.ac.kr',    '$2b$12$exampleHashIvan',    'Ivan Santos',    1),
 (10, 'julia@university.ac.kr',   '$2b$12$exampleHashJulia',   'Julia Han',      0);
 
--- 3. 标签
+-- 3. 태그
 INSERT INTO tag (id, name, category) VALUES
 (1,  'Major Study',        'MAJOR'),
 (2,  'Language',           'LANGUAGE'),
@@ -480,7 +480,7 @@ INSERT INTO tag (id, name, category) VALUES
 (9,  'Coding Test',        'CAREER'),
 (10, 'Team Project',       'MAJOR');
 
--- 4. 用户语言
+-- 4. 사용자 언어
 INSERT INTO user_language (user_id, language) VALUES
 (1,  'Korean'),
 (2,  'Korean'),
@@ -493,7 +493,7 @@ INSERT INTO user_language (user_id, language) VALUES
 (9,  'English'),
 (10, 'Korean');
 
--- 5. 用户标签
+-- 5. 사용자 태그
 INSERT INTO user_tag (user_id, tag_id) VALUES
 (1,  1),
 (1,  5),
@@ -506,7 +506,7 @@ INSERT INTO user_tag (user_id, tag_id) VALUES
 (5,  6),
 (6,  2);
 
--- 6. 学习小组 (current_member_count 를 정확한 값으로 명시 — D-003)
+-- 6. 스터디 (current_member_count 를 정확한 값으로 명시 — D-003)
 INSERT INTO study (id, title, purpose, max_members, current_member_count, activity_cycle, status) VALUES
 (1,  'Algorithms Study Group',    'Solve and review algorithm problems for coding tests',            6, 3, 'Once a week (Monday)',    'OPEN'),
 (2,  'TOEIC Study Group',         'Target TOEIC 850+, intensive study by section',                  5, 2, 'Twice a week (Tue/Thu)',  'OPEN'),
@@ -519,7 +519,7 @@ INSERT INTO study (id, title, purpose, max_members, current_member_count, activi
 (9,  'CS Deep Dive Group',        'In-depth study of OS and networking fundamentals',                5, 1, 'Once a week (Thursday)',  'OPEN'),
 (10, 'Language Exchange Group',   'Korean-English language exchange; international students welcome', 6, 1, 'Once a week (Wednesday)', 'CLOSED');
 
--- 7. 小组标签
+-- 7. 스터디 태그
 INSERT INTO study_tag (study_id, tag_id) VALUES
 (1,  5),
 (1,  9),
@@ -532,11 +532,11 @@ INSERT INTO study_tag (study_id, tag_id) VALUES
 (6,  9),
 (8,  3);
 
--- 8. 组员记录
---   (a) 组长: 기존 LEADER 9건
---   (b) ACCEPTED 申请에 의해 발생한 일반 멤버: id 10~15 (이전 트리거가 자동 생성하던 부분)
+-- 8. 멤버 기록
+--   (a) 조장: 기존 LEADER 9건
+--   (b) ACCEPTED 신청에 의해 발생한 일반 멤버: id 10~15 (이전 트리거가 자동 생성하던 부분)
 INSERT INTO study_member (id, study_id, user_id, role_code, joined_at, is_active) VALUES
--- 组长
+-- 조장
 (1,  1,  1, 'LEADER', '2026-03-01 09:00:00', 1),
 (2,  2,  2, 'LEADER', '2026-03-01 10:00:00', 1),
 (3,  3,  3, 'LEADER', '2026-03-01 11:00:00', 1),
@@ -546,7 +546,7 @@ INSERT INTO study_member (id, study_id, user_id, role_code, joined_at, is_active
 (7,  8,  3, 'LEADER', '2026-03-02 10:00:00', 1),
 (8,  9,  4, 'LEADER', '2026-03-02 11:00:00', 1),
 (9,  10, 5, 'LEADER', '2026-03-02 12:00:00', 1),
--- 일반 멤버 (申请 ACCEPTED 처리 결과)
+-- 일반 멤버 (신청 ACCEPTED 처리 결과)
 (10, 1,  3, 'MEMBER', '2026-03-06 09:00:00', 1),  -- application id 2
 (11, 1,  9, 'MEMBER', '2026-03-06 09:30:00', 1),  -- application id 3
 (12, 2,  4, 'MEMBER', '2026-03-04 08:30:00', 1),  -- application id 6
@@ -554,7 +554,7 @@ INSERT INTO study_member (id, study_id, user_id, role_code, joined_at, is_active
 (14, 3,  6, 'MEMBER', '2026-03-04 08:10:00', 1),  -- application id 8
 (15, 4,  7, 'MEMBER', '2026-03-05 11:00:00', 1);  -- application id 9
 
--- 9. 申请
+-- 9. 신청
 INSERT INTO application
 (id, study_id, applicant_id, status, message, applied_at, processed_at, processed_by_member_id, reject_reason) VALUES
 (1,  1,  8,  'PENDING',  'I want to practice algorithms every week.', '2026-03-07 14:00:00', NULL, NULL, NULL),
@@ -568,7 +568,7 @@ INSERT INTO application
 (9,  4,  7,  'ACCEPTED', 'I am preparing for certification exam.',     '2026-03-04 09:00:00', '2026-03-05 11:00:00', 4, NULL),
 (10, 5,  10, 'PENDING',  'I want to learn pandas and visualization.',  '2026-03-10 17:00:00', NULL, NULL, NULL);
 
--- 10. 通知
+-- 10. 알림
 INSERT INTO notification
 (receiver_id, type, message, is_read, ref_study_id, ref_application_id) VALUES
 (1,  'APPLICATION_SUBMITTED', 'New applicant Hana Moon has applied to your Algorithms Study Group.',     0, 1, 1),
@@ -582,7 +582,7 @@ INSERT INTO notification
 (6,  'APPLICATION_ACCEPTED',  'Your application to English Speaking Group has been accepted.',            1, 3, 8),
 (7,  'APPLICATION_ACCEPTED',  'Your application to Certification Study Group has been accepted.',         1, 4, 9);
 
--- 11. 出勤场次
+-- 11. 출석 세션
 INSERT INTO attendance_session
 (id, study_id, session_num, session_date, title, created_by_member_id) VALUES
 (1,  1, 1, '2026-03-10', 'Algorithms Session 1',       1),
@@ -596,7 +596,7 @@ INSERT INTO attendance_session
 (9,  5, 1, '2026-03-14', 'Data Analysis Session 1',    5),
 (10, 5, 2, '2026-03-21', 'Data Analysis Session 2',    5);
 
--- 12. 出勤记录
+-- 12. 출석 기록
 INSERT INTO attendance_record (study_id, session_id, member_id, status, note) VALUES
 (1, 1, 1,  'PRESENT', 'Leader attended'),
 (1, 1, 10, 'PRESENT', 'Member attended'),
@@ -609,7 +609,7 @@ INSERT INTO attendance_record (study_id, session_id, member_id, status, note) VA
 (4, 7, 4,  'PRESENT', 'Leader attended'),
 (4, 7, 15, 'ABSENT',  'No notice');
 
--- 13. 帖子
+-- 13. 게시글
 INSERT INTO post (id, study_id, author_member_id, type, title, content) VALUES
 (1,  1, 1,  'NOTICE', '[Week 1] Algorithms Study Notice', 'This week: 3 BFS/DFS basic problems. Attach your solution file before attending.'),
 (2,  1, 10, 'FREE',   'Question about recursive approach', 'Why does solving BFS with recursion cause a stack overflow? Any tips?'),
@@ -622,7 +622,7 @@ INSERT INTO post (id, study_id, author_member_id, type, title, content) VALUES
 (9,  5, 5,  'NOTICE', '[Session 1] Data Analysis: pandas basics', 'Install Jupyter Notebook beforehand.'),
 (10, 5, 5,  'FREE',   'Question about groupby', 'How do I apply multiple aggregation functions after groupby?');
 
--- 14. 评论
+-- 14. 댓글
 INSERT INTO post_comment (study_id, post_id, author_member_id, content) VALUES
 (1, 1, 10, 'Got it! I will solve the problems before coming.'),
 (1, 1, 1,  'If everyone prepares in advance, we can have a deeper discussion.'),
@@ -635,7 +635,7 @@ INSERT INTO post_comment (study_id, post_id, author_member_id, content) VALUES
 (5, 9, 5,  'Jupyter Notebook is installed and ready.'),
 (5, 10, 5, 'You can use agg() to apply multiple aggregations.');
 
--- 15. 与帖子/评论相关的通知
+-- 15. 게시글/댓글 관련 알림
 INSERT INTO notification
 (receiver_id, type, message, is_read, ref_study_id, ref_post_id, ref_comment_id) VALUES
 (1,  'COMMENT_REPLY', 'Charlie commented on your notice.', 0, 1, 1, 1),
