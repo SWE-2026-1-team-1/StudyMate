@@ -28,7 +28,7 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
            """)
     Optional<EmailVerification> findUsableForSignup(@Param("email") String email, @Param("now") Instant now);
 
-    // - 쿨다운 체크: 마지막 발송 시각
-    @Query("select e.createdAt from EmailVerification e where e.email = :email order by e.createdAt desc limit 1")
+    // - 쿨다운 체크: 마지막 발송 시각 (JPQL은 limit 미지원 → max 집계 사용)
+    @Query("select max(e.createdAt) from EmailVerification e where e.email = :email")
     Optional<Instant> findLastSentAtByEmail(@Param("email") String email);
 }

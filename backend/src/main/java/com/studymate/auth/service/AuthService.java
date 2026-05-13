@@ -10,6 +10,7 @@ import com.studymate.auth.exception.AuthException;
 import com.studymate.auth.repository.UserRepository;
 import com.studymate.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,9 +36,13 @@ public class AuthService {
         }
 
         String hash = passwordEncoder.encode(request.password());
-        User saved  = userRepository.save(User.create(request.email(), hash, request.name()));
-
-        return new SignupResponse(saved.getId(), saved.getEmail(), saved.getName());
+        try {
+            User saved = userRepository.save(User.create(request.email(), hash, request.name()));
+            return new SignupResponse(saved.getId(), saved.getEmail(), saved.getName());
+        } catch (DataIntegrityViolationException e) {
+            // - existsByEmail 체크 이후 동시 가입 레이스로 unique 위반 시 409로 변환
+            throw new AuthException(ErrorCode.CONFLICT);
+        }
     }
 
     public LoginResponse login(LoginRequest request) {
