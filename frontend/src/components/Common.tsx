@@ -77,12 +77,24 @@ export function StudySideNav() {
   );
 }
 
-export function Hero({ searchValue, onSearchChange, onSearchFocus }: { searchValue?: string; onSearchChange?: (value: string) => void; onSearchFocus?: () => void }) {
+export function Hero({
+  searchValue,
+  onSearchChange,
+  onSearchFocus,
+  className = "",
+  searchBoxClassName = "",
+}: {
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  onSearchFocus?: () => void;
+  className?: string;
+  searchBoxClassName?: string;
+}) {
   return (
-    <section className="hero content-container">
+    <section className={`hero content-container ${className}`}>
       <h1><span>StudyMate</span>맞춤 스터디 탐색</h1>
       <p>자신의 목표에 맞는 스터디 팀을 찾고, 동료들과 함께 더 멀리 나아가세요.</p>
-      <label className="search-box">
+      <label className={`search-box ${searchBoxClassName}`}>
         <i />
         <input
           placeholder="관심 있는 스터디 주제나 기술 스택을 검색해보세요"

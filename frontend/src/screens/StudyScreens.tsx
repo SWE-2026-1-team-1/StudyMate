@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
@@ -7,27 +7,50 @@ import type { ProgressStudy as ProgressStudyItem } from "../types";
 
 export function MainDashboard() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const isSearching = searchQuery.trim().length > 0;
+  const location = useLocation();
+  const fromSearch = Boolean((location.state as { fromSearch?: boolean } | null)?.fromSearch);
+
+  const openSearch = () => {
+    navigate(ROUTE_PATHS.studies, {
+      state: { fromMainSearch: true },
+      viewTransition: true,
+    });
+  };
 
   return (
     <Shell>
       <section className="dashboard-main content-container">
-        <Hero searchValue={searchQuery} onSearchChange={setSearchQuery} />
-        {isSearching ? <ExploreResults /> : <MainDashboardContent onNavigate={navigate} />}
+        <Hero onSearchFocus={openSearch} searchBoxClassName={`route-search-box ${fromSearch ? "return-from-search" : ""}`} />
+        <MainDashboardContent onNavigate={navigate} />
       </section>
     </Shell>
   );
 }
 
 export function ExplorePage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fromMainSearch = Boolean((location.state as { fromMainSearch?: boolean } | null)?.fromMainSearch);
+
+  useEffect(() => {
+    const focusDelay = fromMainSearch ? 320 : 0;
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), focusDelay);
+    return () => window.clearTimeout(focusTimer);
+  }, [fromMainSearch]);
+
   return (
     <Shell>
-      <section className="explore-page content-container">
-        <label className="search-box explore-search">
-          <i />
-          <input placeholder="관심 있는 스터디 주제나 기술 스택을 검색해보세요" />
-        </label>
+      <section className={`explore-page content-container ${fromMainSearch ? "from-main-search" : ""}`}>
+        <div className="search-page-bar">
+          <button className="search-back-button" type="button" aria-label="메인으로 돌아가기" onClick={() => navigate(ROUTE_PATHS.home, { state: { fromSearch: true }, viewTransition: true })}>
+            ←
+          </button>
+          <label className="search-box explore-search route-search-box">
+            <i />
+            <input ref={inputRef} placeholder="관심 있는 스터디 주제나 기술 스택을 검색해보세요" />
+          </label>
+        </div>
         <ExploreResults />
       </section>
     </Shell>
