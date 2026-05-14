@@ -1,6 +1,6 @@
 import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
-import { useState, type ReactNode } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { getTopLevelRoute, ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
@@ -222,12 +222,30 @@ function StudyThumb({ title }: { title: string }) {
   );
 }
 
-export function Field({ label, placeholder, type = "text", icon, autoComplete }: { label: string; placeholder: string; type?: string; icon?: string; autoComplete?: string }) {
+export function Field({
+  label,
+  placeholder,
+  type = "text",
+  icon,
+  autoComplete,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  placeholder: string;
+  type?: string;
+  icon?: string;
+  autoComplete?: string;
+  value?: string;
+  onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+}) {
   return (
     <label className="field">
       {label}
       <span className="input-wrap">
-        <input autoComplete={autoComplete} placeholder={placeholder} type={type} />
+        <input autoComplete={autoComplete} disabled={disabled} placeholder={placeholder} type={type} value={value} onChange={onChange} />
         {icon && <em>{icon}</em>}
       </span>
     </label>

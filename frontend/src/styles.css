@@ -581,7 +581,7 @@ button {
 .auth-content {
   position: relative;
   width: calc(558px * var(--ui-scale));
-  margin: calc(64px * var(--ui-scale)) auto 0;
+  margin: calc(32px * var(--ui-scale)) auto 0;
 }
 
 .auth-phase {
@@ -635,6 +635,9 @@ button {
 .post-list {
   display: grid;
   gap: calc(20px * var(--ui-scale));
+}
+.auth-phase .form-stack {
+  position: relative;
 }
 .button-group {
   display: flex;
@@ -707,6 +710,14 @@ input:focus,
 textarea:focus {
   outline-color: rgba(85, 72, 237, 0.22);
 }
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+input:disabled {
+  color: #8b95a3;
+  background: #e8edf3;
+}
 .primary,
 .secondary,
 .study-card button,
@@ -757,6 +768,60 @@ textarea:focus {
 }
 .auth-phase .form-stack .auth-keywords + .primary.wide {
   margin-top: calc(24px * var(--ui-scale));
+}
+.verify-btn {
+  width: 100%;
+  height: calc(46px * var(--ui-scale));
+  background: #e2e8f0;
+  color: #475569;
+  border: 0;
+  border-radius: calc(999px * var(--ui-scale));
+  font-family: inherit;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: calc(-10px * var(--ui-scale));
+  margin-bottom: calc(4px * var(--ui-scale));
+  transition: all 0.2s;
+}
+.verify-btn:hover {
+  background: #cbd5e1;
+}
+.verify-btn:active {
+  transform: scale(0.98);
+}
+.primary:disabled,
+.secondary:disabled,
+.verify-btn:disabled {
+  opacity: 0.62;
+  box-shadow: none;
+  transform: none;
+}
+.auth-phase .auth-feedback {
+  position: absolute;
+  right: 0;
+  left: 0;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auth-phase .login-feedback {
+  bottom: calc(70px * var(--ui-scale));
+}
+.auth-phase .signup-feedback {
+  bottom: calc(70px * var(--ui-scale));
+}
+.auth-phase .auth-feedback.success {
+  color: #0f8f63;
+}
+.auth-phase .auth-feedback.error {
+  color: #dc2626;
 }
 .auth-keywords {
   display: flex;
