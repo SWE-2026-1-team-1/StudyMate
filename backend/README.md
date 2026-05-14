@@ -56,6 +56,37 @@ StudyMate의 Spring Boot 3.4 / Java 21 백엔드.
 
 ---
 
+## Docker 로 실행
+
+로컬 MySQL 설치 없이 한 방에 띄우려면 Docker Compose 사용. `backend/` 에서:
+
+```bash
+docker compose up --build
+```
+
+- `db` (MySQL 8.0) 와 `app` (Spring) 컨테이너가 같이 뜸.
+- 첫 기동 시 `studymate_schema.sql` 이 `/docker-entrypoint-initdb.d/` 로 마운트되어 자동 적용 (D-006 반영본).
+- 데이터는 `studymate-mysql-data` 볼륨에 보존 — 스키마를 다시 깔려면 `docker compose down -v`.
+- 메일을 실제로 보내려면 `backend/.env` 에 `MAIL_USERNAME`, `MAIL_PASSWORD`, (선택) `JWT_SECRET` 정의.
+
+운영 (EC2) 은 **CI 가 GHCR 에 이미지 push → SSH 로 compose 파일 주입 후 재기동** 흐름. 자동.
+[.github/workflows/deploy.yml](../.github/workflows/deploy.yml) 참조.
+
+- 이미지: `ghcr.io/swe-2026-1-team-1/studymate-backend:sha-<short>`
+- EC2 에 git repo 불필요 — compose 파일은 매 배포마다 `scp` 로 주입
+- EC2 사전 준비: docker engine + compose plugin, `/home/ubuntu/studymate/.env` 의 비밀 값, 호스트 MySQL bind-address 가 `0.0.0.0` 또는 docker0 인터페이스로 열려 있을 것
+- `.env` 필요 키: `DB_URL` (호스트명 `host.docker.internal`), `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+  - 예: `DB_URL=jdbc:mysql://host.docker.internal:3306/studymate?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8`
+
+수동 재기동 (디버깅용):
+```bash
+cd /home/ubuntu/studymate
+IMAGE_TAG=latest docker compose -f docker-compose.prod.yml pull
+IMAGE_TAG=latest docker compose -f docker-compose.prod.yml up -d
+```
+
+---
+
 ## 빌드 / 테스트
 
 ```bash

@@ -1,0 +1,36 @@
+# 프로덕션 (EC2) 용 — GHCR 에서 받아온 이미지를 그대로 띄움.
+# MySQL 은 호스트에 직접 설치된 것을 사용 (컨테이너로 띄우지 않음).
+#
+# 이 파일은 CI 가 EC2 로 scp 주입하므로 EC2 에 git repo 가 있을 필요는 없다.
+#
+# 수동 기동 (디버깅용):
+#   IMAGE_TAG=<sha-or-latest> docker compose -f docker-compose.prod.yml up -d
+#
+# 사전 준비 (EC2):
+#   - docker engine + compose plugin 설치
+#   - /home/ubuntu/studymate/.env 에 DB_URL · DB_USERNAME · DB_PASSWORD · JWT_SECRET · MAIL_USERNAME · MAIL_PASSWORD
+#   - DB_URL 호스트명은 host.docker.internal (아래 extra_hosts 가 host-gateway 로 해석)
+#     예: DB_URL=jdbc:mysql://host.docker.internal:3306/studymate?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+#   - 호스트 MySQL bind-address 가 0.0.0.0 또는 docker0 인터페이스로 열려 있을 것
+#   - GHCR 가 private 이면 `docker login ghcr.io` 선행 (CI 가 매 배포마다 수행)
+
+services:
+  app:
+    image: ghcr.io/swe-2026-1-team-1/studymate-backend:${IMAGE_TAG:-latest}
+    container_name: studymate-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/8080"]
+      interval: 15s
+      timeout: 3s
+      start_period: 45s
+      retries: 5
