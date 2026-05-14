@@ -257,7 +257,7 @@ export function PageHeading({ title, subtitle }: { title: string; subtitle: stri
 }
 
 export function Panel({ title, className = "", children }: { title: string; className?: string; children: ReactNode }) {
-  return <section className={`panel ${className}`}><h2>{title}</h2>{children}</section>;
+  return <section className={`panel ${className}`}>{title && <h2>{title}</h2>}{children}</section>;
 }
 
 export function StatusRow({ title, meta, status }: { title: string; meta: string; status: string }) {

@@ -4,7 +4,6 @@ import { authInterestTags, createStudy, exploreStudies, profile, studies, studyD
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
-import type { ProgressStudy as ProgressStudyItem } from "../types";
 
 import { allMockStudies } from "../mockStudies";
 
@@ -193,52 +192,63 @@ export function StudyDetail() {
 }
 
 export function MyPage() {
+  const navigate = useNavigate();
+  const [interestTags, setInterestTags] = useState<string[]>(profile.interestKeywords);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState("박지민 (Jimin Park)");
+  const [profileSchool, setProfileSchool] = useState("Ajou University 3학년");
+
+  const handleRemoveInterestTag = (tagToRemove: string) => {
+    setInterestTags(interestTags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleAddInterestTag = (newTag: string) => {
+    const normalizedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
+    if (!interestTags.includes(normalizedTag)) {
+      setInterestTags([...interestTags, normalizedTag]);
+    }
+  };
+
   return (
     <main className="profile-page content-container">
       <section className="profile-hero">
-        <Avatar name="user" className="profile-photo" />
-        <div>
-          <h1>박지민 (Jimin Park) • Ajou University 3학년</h1>
-          <div className="keyword-set">
-            {profile.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}
-          </div>
+        <div className="profile-photo-wrap">
+          <Avatar name="user" className="profile-photo" />
+          <span className="profile-verified">✓</span>
         </div>
-        <button className="primary" type="button">프로필 편집</button>
+        <div className="profile-copy">
+          {isEditingProfile ? (
+            <div className="profile-edit-fields">
+              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" />
+              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" />
+            </div>
+          ) : (
+            <div className="profile-text-lines">
+              <h1>{profileName}</h1>
+              <p>{profileSchool}</p>
+            </div>
+          )}
+        </div>
+        <button className="primary" type="button" onClick={() => setIsEditingProfile(!isEditingProfile)}>
+          {isEditingProfile ? "저장하기" : "프로필 편집"}
+        </button>
       </section>
       <section className="profile-grid">
         <div className="profile-study-section">
+          <Panel title="" className="keyword-panel keyword-strip">
+            <TagList tags={interestTags} onRemoveTag={handleRemoveInterestTag} onAddTag={handleAddInterestTag} />
+          </Panel>
           <h2>참여 중인 스터디</h2>
-          <div className="profile-content-grid">
-            <div className="profile-left-column">
-              <div className="mini-study-grid">
-                {profile.progressStudies.map((study) => <ProgressStudy key={study.title} {...study} />)}
-              </div>
-              <Panel title="지원 현황" className="application-panel">
-                {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
-              </Panel>
-            </div>
-            <Panel title="관심 키워드" className="keyword-panel">
-              <button className="edit-pencil" type="button">✎</button>
-              <div className="keyword-set color">
-                {profile.interestKeywords.map((tag) => <span key={tag}>{tag}</span>)}
-              </div>
-              <button className="add-tag-button" type="button">+ Add Tag</button>
-            </Panel>
+          <div className="study-grid profile-study-grid">
+            {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => navigate(ROUTE_PATHS.teamBoard())} />)}
           </div>
+          <h2>지원 현황</h2>
+          <Panel title="" className="application-panel">
+            {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
+          </Panel>
         </div>
       </section>
     </main>
-  );
-}
-
-function ProgressStudy({ title, people, time, value }: ProgressStudyItem) {
-  return (
-    <article className="progress-study">
-      <b>{title}</b>
-      <p><span className="meta people">{people}</span><span className="meta time">{time}</span></p>
-      <i><strong style={{ width: value }} /></i>
-      <small><span>ATTENDANCE</span><span>{value}</span></small>
-    </article>
   );
 }
 
