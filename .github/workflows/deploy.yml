@@ -45,6 +45,7 @@ jobs:
           context: backend
           file: backend/Dockerfile
           push: true
+          platforms: linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ steps.img.outputs.name }}:${{ steps.meta.outputs.image_tag }}
             ${{ env.REGISTRY }}/${{ steps.img.outputs.name }}:latest
