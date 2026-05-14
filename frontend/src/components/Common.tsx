@@ -1,6 +1,6 @@
 import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
-import { useState, type ReactNode } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { getTopLevelRoute, ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
@@ -145,14 +145,14 @@ export function Hero({
   );
 }
 
-export function SectionTitle({ title, subtitle, action }: { title: string; subtitle?: string; action?: string }) {
+export function SectionTitle({ title, subtitle, action, onAction }: { title: string; subtitle?: string; action?: string; onAction?: () => void }) {
   return (
     <header className="section-title">
       <div>
         <h2>{title}</h2>
         {subtitle && <p>{subtitle}</p>}
       </div>
-      {action && <button type="button">{action}</button>}
+      {action && <button type="button" onClick={onAction}>{action}</button>}
     </header>
   );
 }
@@ -222,12 +222,30 @@ function StudyThumb({ title }: { title: string }) {
   );
 }
 
-export function Field({ label, placeholder, type = "text", icon, autoComplete }: { label: string; placeholder: string; type?: string; icon?: string; autoComplete?: string }) {
+export function Field({
+  label,
+  placeholder,
+  type = "text",
+  icon,
+  autoComplete,
+  value,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  placeholder: string;
+  type?: string;
+  icon?: string;
+  autoComplete?: string;
+  value?: string;
+  onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+}) {
   return (
     <label className="field">
       {label}
       <span className="input-wrap">
-        <input autoComplete={autoComplete} placeholder={placeholder} type={type} />
+        <input autoComplete={autoComplete} disabled={disabled} placeholder={placeholder} type={type} value={value} onChange={onChange} />
         {icon && <em>{icon}</em>}
       </span>
     </label>
@@ -239,7 +257,7 @@ export function PageHeading({ title, subtitle }: { title: string; subtitle: stri
 }
 
 export function Panel({ title, className = "", children }: { title: string; className?: string; children: ReactNode }) {
-  return <section className={`panel ${className}`}><h2>{title}</h2>{children}</section>;
+  return <section className={`panel ${className}`}>{title && <h2>{title}</h2>}{children}</section>;
 }
 
 export function StatusRow({ title, meta, status }: { title: string; meta: string; status: string }) {

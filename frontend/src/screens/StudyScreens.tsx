@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
+import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
-import type { ProgressStudy as ProgressStudyItem } from "../types";
 
 import { allMockStudies } from "../mockStudies";
 
@@ -77,7 +77,7 @@ function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof us
         <Illustration />
       </section>
       <section className="section-block">
-        <SectionTitle title="My Study" action="전체 보기  →" />
+        <SectionTitle title="My Study" action="마이페이지  →" onAction={() => onNavigate(ROUTE_PATHS.mypage)} />
         <div className="study-grid">
           {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => onNavigate(ROUTE_PATHS.teamBoard())} />)}
         </div>
@@ -192,58 +192,70 @@ export function StudyDetail() {
 }
 
 export function MyPage() {
+  const navigate = useNavigate();
+  const [interestTags, setInterestTags] = useState<string[]>(profile.interestKeywords);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState("박지민 (Jimin Park)");
+  const [profileSchool, setProfileSchool] = useState("Ajou University 3학년");
+
+  const handleRemoveInterestTag = (tagToRemove: string) => {
+    setInterestTags(interestTags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleAddInterestTag = (newTag: string) => {
+    const normalizedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
+    if (!interestTags.includes(normalizedTag)) {
+      setInterestTags([...interestTags, normalizedTag]);
+    }
+  };
+
   return (
     <main className="profile-page content-container">
       <section className="profile-hero">
-        <Avatar name="user" className="profile-photo" />
-        <div>
-          <h1>박지민 (Jimin Park) • Ajou University 3학년</h1>
-          <div className="keyword-set">
-            {profile.keywords.map((keyword) => <span key={keyword}>{keyword}</span>)}
-          </div>
+        <div className="profile-photo-wrap">
+          <Avatar name="user" className="profile-photo" />
+          <span className="profile-verified">✓</span>
         </div>
-        <button className="primary" type="button">프로필 편집</button>
+        <div className="profile-copy">
+          {isEditingProfile ? (
+            <div className="profile-edit-fields">
+              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" />
+              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" />
+            </div>
+          ) : (
+            <div className="profile-text-lines">
+              <h1>{profileName}</h1>
+              <p>{profileSchool}</p>
+            </div>
+          )}
+        </div>
+        <button className="primary" type="button" onClick={() => setIsEditingProfile(!isEditingProfile)}>
+          {isEditingProfile ? "저장하기" : "프로필 편집"}
+        </button>
       </section>
       <section className="profile-grid">
         <div className="profile-study-section">
+          <Panel title="" className="keyword-panel keyword-strip">
+            <TagList tags={interestTags} onRemoveTag={handleRemoveInterestTag} onAddTag={handleAddInterestTag} />
+          </Panel>
           <h2>참여 중인 스터디</h2>
-          <div className="profile-content-grid">
-            <div className="profile-left-column">
-              <div className="mini-study-grid">
-                {profile.progressStudies.map((study) => <ProgressStudy key={study.title} {...study} />)}
-              </div>
-              <Panel title="지원 현황" className="application-panel">
-                {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
-              </Panel>
-            </div>
-            <Panel title="관심 키워드" className="keyword-panel">
-              <button className="edit-pencil" type="button">✎</button>
-              <div className="keyword-set color">
-                {profile.interestKeywords.map((tag) => <span key={tag}>{tag}</span>)}
-              </div>
-              <button className="add-tag-button" type="button">+ Add Tag</button>
-            </Panel>
+          <div className="study-grid profile-study-grid">
+            {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => navigate(ROUTE_PATHS.teamBoard())} />)}
           </div>
+          <h2>지원 현황</h2>
+          <Panel title="" className="application-panel">
+            {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
+          </Panel>
         </div>
       </section>
     </main>
   );
 }
 
-function ProgressStudy({ title, people, time, value }: ProgressStudyItem) {
-  return (
-    <article className="progress-study">
-      <b>{title}</b>
-      <p><span className="meta people">{people}</span><span className="meta time">{time}</span></p>
-      <i><strong style={{ width: value }} /></i>
-      <small><span>ATTENDANCE</span><span>{value}</span></small>
-    </article>
-  );
-}
-
 export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
   const navigate = useNavigate();
   const next = step === 1 ? ROUTE_PATHS.createRules : step === 2 ? ROUTE_PATHS.createSchedule : ROUTE_PATHS.home;
+  const previous = step === 2 ? ROUTE_PATHS.createBasic : step === 3 ? ROUTE_PATHS.createRules : ROUTE_PATHS.home;
   const title = step === 1 ? "기본 정보를 입력해주세요" : step === 2 ? "규칙 및 태그를 입력해주세요" : "일정 설정";
 
   return (
@@ -256,7 +268,9 @@ export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
         {step === 2 && <RulesForm />}
         {step === 3 && <ScheduleForm />}
         <footer className="form-footer">
-          <button className="plain" type="button">× 취소하기</button>
+          <button className="plain" type="button" onClick={() => navigate(previous)}>
+            {step === 1 ? "× 취소하기" : "← 이전으로"}
+          </button>
           <button className="primary" type="button" onClick={() => navigate(next)}>
             {step === 3 ? "완료" : "다음 단계로 이동"} <span>→</span>
           </button>
@@ -280,13 +294,28 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
 }
 
 function BasicForm() {
+  const defaultCategory = createStudy.categories.find((category) => category.selected)?.label ?? createStudy.categories[0].label;
+  const defaultVisibility = createStudy.visibilityOptions.find((option) => option.selected)?.label ?? createStudy.visibilityOptions[0].label;
+  const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
+  const [selectedVisibility, setSelectedVisibility] = useState(defaultVisibility);
+
   return (
     <div className="create-fields">
       <Field label="스터디 제목" placeholder="예: [CS 기초] 기술 면접 대비 올인원 스터디" />
       <label>
         카테고리 선택
         <div className="category-grid">
-          {createStudy.categories.map(({ icon, label, selected }) => <button className={selected ? "selected" : ""} key={label} type="button"><span>{icon}</span>{label}</button>)}
+          {createStudy.categories.map(({ icon, label }) => (
+            <button
+              aria-pressed={selectedCategory === label}
+              className={selectedCategory === label ? "selected" : ""}
+              key={label}
+              type="button"
+              onClick={() => setSelectedCategory(label)}
+            >
+              <span>{icon}</span>{label}
+            </button>
+          ))}
         </div>
       </label>
       <label>스터디 목표 및 소개<textarea placeholder="스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요." /></label>
@@ -295,7 +324,17 @@ function BasicForm() {
         <label>
           공개 여부
           <div className="visibility-row">
-            {createStudy.visibilityOptions.map(({ label, selected }) => <button className={selected ? "selected" : ""} key={label} type="button">{label}</button>)}
+            {createStudy.visibilityOptions.map(({ label }) => (
+              <button
+                aria-pressed={selectedVisibility === label}
+                className={selectedVisibility === label ? "selected" : ""}
+                key={label}
+                type="button"
+                onClick={() => setSelectedVisibility(label)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </label>
       </div>
@@ -304,23 +343,48 @@ function BasicForm() {
 }
 
 function RulesForm() {
+  const [tags, setTags] = useState<string[]>(authInterestTags);
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleAddTag = (newTag: string) => {
+    const normalizedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
+    if (!tags.includes(normalizedTag)) {
+      setTags([...tags, normalizedTag]);
+    }
+  };
+
   return (
     <div className="create-fields">
       <Field label="규칙 및 태그" placeholder="규칙을 작성해주세요!" />
       <input placeholder="규칙을 작성해주세요!" />
       <input placeholder="규칙을 작성해주세요!" />
-      <div className="keyword-set auth-keywords">
-        {authInterestTags.map((tag, index) => <span className={`tag-${index + 1}`} key={tag}>{tag}{index < 2 && <b>×</b>}</span>)}
-        <button type="button">+ Add Tag</button>
-      </div>
+      <TagList tags={tags} onRemoveTag={handleRemoveTag} onAddTag={handleAddTag} />
     </div>
   );
 }
 
 function ScheduleForm() {
+  const [scheduleFields, setScheduleFields] = useState(() =>
+    createStudy.schedule.reduce<Record<string, string>>((fields, { label, value }) => {
+      fields[label] = value;
+      return fields;
+    }, {})
+  );
+
   return (
     <div className="schedule-list">
-      {createStudy.schedule.map(({ label, value }) => <div key={label}><b>{label}</b><span>{value}</span></div>)}
+      {createStudy.schedule.map(({ label }) => (
+        <label key={label}>
+          <b>{label}</b>
+          <input
+            value={scheduleFields[label]}
+            onChange={(event) => setScheduleFields({ ...scheduleFields, [label]: event.target.value })}
+          />
+        </label>
+      ))}
     </div>
   );
 }

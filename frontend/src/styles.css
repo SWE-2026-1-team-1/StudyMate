@@ -581,7 +581,7 @@ button {
 .auth-content {
   position: relative;
   width: calc(558px * var(--ui-scale));
-  margin: calc(64px * var(--ui-scale)) auto 0;
+  margin: calc(32px * var(--ui-scale)) auto 0;
 }
 
 .auth-phase {
@@ -635,6 +635,9 @@ button {
 .post-list {
   display: grid;
   gap: calc(20px * var(--ui-scale));
+}
+.auth-phase .form-stack {
+  position: relative;
 }
 .button-group {
   display: flex;
@@ -707,6 +710,14 @@ input:focus,
 textarea:focus {
   outline-color: rgba(85, 72, 237, 0.22);
 }
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+}
+input:disabled {
+  color: #8b95a3;
+  background: #e8edf3;
+}
 .primary,
 .secondary,
 .study-card button,
@@ -757,6 +768,60 @@ textarea:focus {
 }
 .auth-phase .form-stack .auth-keywords + .primary.wide {
   margin-top: calc(24px * var(--ui-scale));
+}
+.verify-btn {
+  width: 100%;
+  height: calc(46px * var(--ui-scale));
+  background: #e2e8f0;
+  color: #475569;
+  border: 0;
+  border-radius: calc(999px * var(--ui-scale));
+  font-family: inherit;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: calc(-10px * var(--ui-scale));
+  margin-bottom: calc(4px * var(--ui-scale));
+  transition: all 0.2s;
+}
+.verify-btn:hover {
+  background: #cbd5e1;
+}
+.verify-btn:active {
+  transform: scale(0.98);
+}
+.primary:disabled,
+.secondary:disabled,
+.verify-btn:disabled {
+  opacity: 0.62;
+  box-shadow: none;
+  transform: none;
+}
+.auth-phase .auth-feedback {
+  position: absolute;
+  right: 0;
+  left: 0;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auth-phase .login-feedback {
+  bottom: calc(70px * var(--ui-scale));
+}
+.auth-phase .signup-feedback {
+  bottom: calc(70px * var(--ui-scale));
+}
+.auth-phase .auth-feedback.success {
+  color: #0f8f63;
+}
+.auth-phase .auth-feedback.error {
+  color: #dc2626;
 }
 .auth-keywords {
   display: flex;
@@ -1623,9 +1688,7 @@ textarea:focus {
 .profile-hero {
   position: relative;
   display: grid;
-  grid-template-columns: calc(150px * var(--ui-scale)) 1fr calc(
-      170px * var(--ui-scale)
-    );
+  grid-template-columns: calc(150px * var(--ui-scale)) 1fr calc(170px * var(--ui-scale));
   gap: calc(42px * var(--ui-scale));
   align-items: center;
   min-height: calc(205px * var(--ui-scale));
@@ -1642,30 +1705,86 @@ textarea:focus {
   background: #edf0ff;
   content: "";
 }
-.profile-photo {
+.profile-photo-wrap {
+  position: relative;
   width: calc(132px * var(--ui-scale));
   height: calc(132px * var(--ui-scale));
+}
+.profile-photo {
+  width: 100%;
+  height: 100%;
   border: calc(6px * var(--ui-scale)) solid #fff;
   border-radius: calc(24px * var(--ui-scale));
   box-shadow: 0 calc(16px * var(--ui-scale)) calc(28px * var(--ui-scale))
     rgba(19, 27, 47, 0.12);
+  object-fit: cover;
+}
+.profile-verified {
+  position: absolute;
+  right: calc(-8px * var(--ui-scale));
+  bottom: calc(4px * var(--ui-scale));
+  display: grid;
+  width: calc(34px * var(--ui-scale));
+  height: calc(34px * var(--ui-scale));
+  place-items: center;
+  border: calc(4px * var(--ui-scale)) solid #fff;
+  border-radius: 50%;
+  background: #12c795;
+  color: #fff;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 800;
 }
 .profile-hero h1 {
-  margin: 0 0 calc(24px * var(--ui-scale));
+  margin: 0;
   color: #617086;
   font-family: inherit;
   font-size: calc(24px * var(--ui-scale));
-  font-weight: 500;
+  font-weight: 600;
+}
+.profile-text-lines {
+  display: grid;
+  gap: calc(12px * var(--ui-scale));
+}
+.profile-text-lines p {
+  margin: 0;
+  color: #617086;
+  font-size: calc(22px * var(--ui-scale));
+  font-weight: 600;
+}
+.profile-copy > .keyword-set {
+  margin-top: calc(24px * var(--ui-scale));
+}
+.profile-edit-fields {
+  display: grid;
+  gap: calc(16px * var(--ui-scale));
+  max-width: calc(520px * var(--ui-scale));
+}
+.profile-edit-fields input {
+  height: calc(42px * var(--ui-scale));
+  border: calc(1px * var(--ui-scale)) solid #d7deea;
+  border-radius: calc(14px * var(--ui-scale));
+  padding: 0 calc(18px * var(--ui-scale));
+  background: #fff;
+  color: #617086;
+  font: inherit;
+  font-size: calc(18px * var(--ui-scale));
+  font-weight: 600;
+  outline: none;
+}
+.profile-edit-fields input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 calc(3px * var(--ui-scale)) rgba(85, 72, 237, 0.12);
 }
 .profile-hero .primary {
   position: relative;
   z-index: 1;
   height: calc(64px * var(--ui-scale));
+  font-size: calc(18px * var(--ui-scale));
 }
 .profile-grid {
   display: grid;
   gap: calc(50px * var(--ui-scale));
-  margin-top: calc(36px * var(--ui-scale));
+  margin-top: calc(18px * var(--ui-scale));
 }
 .profile-study-section {
   display: grid;
@@ -1691,6 +1810,10 @@ textarea:focus {
 .mini-study-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  gap: calc(30px * var(--ui-scale));
+}
+.profile-study-grid {
+  grid-template-columns: repeat(3, 1fr);
   gap: calc(30px * var(--ui-scale));
 }
 .progress-study {
@@ -1754,6 +1877,16 @@ textarea:focus {
   min-height: calc(600px * var(--ui-scale));
   flex-direction: column;
   align-self: stretch;
+}
+.keyword-strip {
+  display: block;
+  align-items: center;
+  min-height: 0;
+  padding: calc(22px * var(--ui-scale)) calc(30px * var(--ui-scale));
+}
+.keyword-strip .auth-keywords {
+  min-width: 0;
+  margin: 0;
 }
 .edit-pencil {
   position: absolute;
@@ -1949,7 +2082,7 @@ textarea:focus {
   gap: calc(26px * var(--ui-scale));
   margin-top: calc(40px * var(--ui-scale));
 }
-.schedule-list div {
+.schedule-list label {
   display: grid;
   grid-template-columns: calc(160px * var(--ui-scale)) 1fr;
   align-items: center;
@@ -1959,13 +2092,20 @@ textarea:focus {
   background: #edf1f4;
   color: var(--purple);
   font-size: calc(21px * var(--ui-scale));
-  font-weight: 700;
+  font-weight: 400;
 }
 .schedule-list b {
   border-right: calc(1px * var(--ui-scale)) solid #b9bec5;
 }
-.schedule-list span {
-  padding-left: calc(300px * var(--ui-scale));
+.schedule-list input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0 0 0 calc(48px * var(--ui-scale));
+  background: transparent;
+  color: #30343a;
+  font: inherit;
+  outline: none;
 }
 .form-footer {
   display: flex;
