@@ -43,7 +43,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: local
       # application-local.yml 의 localhost 값을 컨테이너 네트워크 호스트명으로 덮어쓰기
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/studymate?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/studymate?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: "1234"
       # 비밀 값 (.env 또는 셸 환경에서 주입)
