@@ -1,0 +1,25 @@
+# 빌드 산출물
+build/
+out/
+.gradle/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# VCS
+.git/
+.gitignore
+
+# 환경/비밀
+.env
+.env.*
+
+# 테스트 캐시
+**/test-results/
+**/reports/
