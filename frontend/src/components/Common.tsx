@@ -145,14 +145,14 @@ export function Hero({
   );
 }
 
-export function SectionTitle({ title, subtitle, action }: { title: string; subtitle?: string; action?: string }) {
+export function SectionTitle({ title, subtitle, action, onAction }: { title: string; subtitle?: string; action?: string; onAction?: () => void }) {
   return (
     <header className="section-title">
       <div>
         <h2>{title}</h2>
         {subtitle && <p>{subtitle}</p>}
       </div>
-      {action && <button type="button">{action}</button>}
+      {action && <button type="button" onClick={onAction}>{action}</button>}
     </header>
   );
 }

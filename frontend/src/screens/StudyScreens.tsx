@@ -78,7 +78,7 @@ function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof us
         <Illustration />
       </section>
       <section className="section-block">
-        <SectionTitle title="My Study" action="전체 보기  →" />
+        <SectionTitle title="My Study" action="마이페이지  →" onAction={() => onNavigate(ROUTE_PATHS.mypage)} />
         <div className="study-grid">
           {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => onNavigate(ROUTE_PATHS.teamBoard())} />)}
         </div>
