@@ -1,0 +1,63 @@
+# 로컬 개발용 — Spring + MySQL 한 묶음으로 기동
+#
+# 사용법:
+#   cd backend
+#   docker compose up --build
+#
+# .env (옵션): MAIL_USERNAME, MAIL_PASSWORD, JWT_SECRET 등 비밀 값
+# 이 파일 옆에 .env 두면 자동 로드됨.
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: studymate-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: studymate
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - studymate-mysql-data:/var/lib/mysql
+      # 첫 기동 시 스키마 자동 주입 (D-006 반영본)
+      - ../studymate_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p1234"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: studymate-backend:local
+    container_name: studymate-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      # application-local.yml 의 localhost 값을 컨테이너 네트워크 호스트명으로 덮어쓰기
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/studymate?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "1234"
+      # 비밀 값 (.env 또는 셸 환경에서 주입)
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-key-min32chars-padding}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/8080"]
+      interval: 15s
+      timeout: 3s
+      start_period: 45s
+      retries: 5
+
+volumes:
+  studymate-mysql-data:

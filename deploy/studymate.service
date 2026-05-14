@@ -1,0 +1,19 @@
+[Unit]
+Description=StudyMate Backend
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/studymate
+EnvironmentFile=/home/ubuntu/studymate/.env
+ExecStart=/usr/bin/java -jar -Dspring.profiles.active=prod /home/ubuntu/studymate/studymate.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
