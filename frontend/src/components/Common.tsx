@@ -1,6 +1,6 @@
 import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { getTopLevelRoute, ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
@@ -8,9 +8,17 @@ import userProfileIcon from "../assets/user_profile.svg";
 import techStudyIcon from "../assets/tech_study.svg";
 import englishStudyIcon from "../assets/english_study.svg";
 import algorithmStudyIcon from "../assets/algorithm_study.svg";
+import globeIcon from "../assets/language.svg";
 
 type Navigate = (screen: ScreenId) => void;
 type TopLevelNav = "main" | "explore" | "create" | "mypage";
+
+type Language = { code: string; label: string };
+const LANGUAGES: Language[] = [
+  { code: "KO", label: "한국어" },
+  { code: "EN", label: "English" },
+  { code: "ZH", label: "中文" },
+];
 
 export function ScreenSwitcher({ current, onChange }: { current: ScreenId; onChange: Navigate }) {
   return (
@@ -33,6 +41,8 @@ export function TopBar() {
   const { pathname } = useLocation();
   const activeNav: TopLevelNav = getTopLevelRoute(pathname);
   const activeIndex = activeNav === "main" ? 0 : activeNav === "explore" ? 1 : activeNav === "create" ? 2 : 3;
+  const [lang, setLang] = useState(LANGUAGES[0]);
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   return (
     <header className="topbar">
@@ -41,13 +51,40 @@ export function TopBar() {
         <span className="brand-link">StudyMate</span>
       </NavLink>
       <nav className={`top-nav active-${activeIndex}`} aria-label="주요 화면">
-        <NavLink className={activeNav === "main" ? "active" : ""} to={ROUTE_PATHS.home}>Home</NavLink>
-        <NavLink className={activeNav === "explore" ? "active" : ""} to={ROUTE_PATHS.studies}>Search</NavLink>
+        <NavLink className={activeNav === "main" ? "active" : ""} to={ROUTE_PATHS.home} end>Home</NavLink>
+        <NavLink className={activeNav === "explore" ? "active" : ""} to={ROUTE_PATHS.studies} end>Search</NavLink>
         <NavLink className={activeNav === "create" ? "active" : ""} to={ROUTE_PATHS.createBasic}>Create Study</NavLink>
         <NavLink className={activeNav === "mypage" ? "active" : ""} to={ROUTE_PATHS.mypage}>My Page</NavLink>
       </nav>
       <div className="top-actions">
-        <span className="lang-toggle"><b>KR</b><b>EN</b></span>
+        <div className="lang-selector">
+          <button 
+            className="language-pill" 
+            type="button" 
+            onClick={() => setShowLangMenu(!showLangMenu)}
+          >
+            <img src={globeIcon} alt="Globe Icon" className="globe-icon" />
+            {lang.code} <i className="arrow-down" />
+          </button>
+          
+          {showLangMenu && (
+            <div className="lang-dropdown">
+              {LANGUAGES.map(l => (
+                <button 
+                  key={l.code} 
+                  type="button" 
+                  onClick={() => {
+                    setLang(l);
+                    setShowLangMenu(false);
+                  }}
+                  className={lang.code === l.code ? "active" : ""}
+                >
+                  {l.label} ({l.code})
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <NavLink className="avatar-button" aria-label="마이페이지로 이동" to={ROUTE_PATHS.mypage}>
           <Avatar className="mini-avatar" name="user" />
         </NavLink>
