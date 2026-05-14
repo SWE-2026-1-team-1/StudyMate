@@ -2014,7 +2014,7 @@ input:disabled {
   gap: calc(26px * var(--ui-scale));
   margin-top: calc(40px * var(--ui-scale));
 }
-.schedule-list div {
+.schedule-list label {
   display: grid;
   grid-template-columns: calc(160px * var(--ui-scale)) 1fr;
   align-items: center;
@@ -2024,13 +2024,20 @@ input:disabled {
   background: #edf1f4;
   color: var(--purple);
   font-size: calc(21px * var(--ui-scale));
-  font-weight: 700;
+  font-weight: 400;
 }
 .schedule-list b {
   border-right: calc(1px * var(--ui-scale)) solid #b9bec5;
 }
-.schedule-list span {
-  padding-left: calc(300px * var(--ui-scale));
+.schedule-list input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0 0 0 calc(48px * var(--ui-scale));
+  background: transparent;
+  color: #30343a;
+  font: inherit;
+  outline: none;
 }
 .form-footer {
   display: flex;
