@@ -7,6 +7,11 @@ import type { ProgressStudy as ProgressStudyItem } from "../types";
 
 import { allMockStudies } from "../mockStudies";
 
+import informIcon from "../assets/inform.svg";
+import rocketIcon from "../assets/rocket.svg";
+import ruleIcon from "../assets/rule.svg";
+import shareIcon from "../assets/share.svg";
+
 export function MainDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -147,23 +152,22 @@ export function StudyDetail() {
       <section className="detail-page content-container">
         <div className="detail-top">
           <div>
-            <h1>비즈니스 영어 회화 실전</h1>
-            <h2>실무 상황에서 바로 쓰는 영어 회화 스터디</h2>
+            <h1>{studyDetail.title}</h1>
+            <h2>{studyDetail.subtitle}</h2>
             <div className="detail-meta">
               {studyDetail.tags.map((tag) => <span key={tag}>{tag}</span>)}
               <span className="location">{studyDetail.location}</span>
             </div>
           </div>
           <div className="detail-actions">
-            <button className="primary" type="button">Apply Now <span>↗</span></button>
-            <button className="share" type="button">⌯</button>
+            <button className="primary" type="button">참여하기 <span><img src={rocketIcon} alt="" /></span></button>
+            <button className="share" type="button"><img src={shareIcon} alt="Share" /></button>
           </div>
         </div>
         <div className="detail-grid">
           <section className="panel wide-panel">
-            <h2><span>▤</span> 스터디 소개</h2>
-            <p>이 스터디는 비즈니스 환경에서 자주 사용되는 영어 표현과 회화 패턴을 실전 중심으로 연습하는 것을 목표로 합니다. 회의, 이메일, 발표, 협상, 네트워킹 등 실제 업무 상황을 바탕으로 영어 표현을 익히고, 매주 롤플레이와 피드백을 통해 자연스럽게 말하는 능력을 향상시킵니다.</p>
-            <p>영어를 단순히 공부하는 것이 아니라 실제 상황에서 바로 사용할 수 있도록 반복 연습합니다.</p>
+            <h2><span><img src={informIcon} alt="" /></span> 스터디 소개</h2>
+            {studyDetail.description.map((p, i) => <p key={i}>{p}</p>)}
           </section>
           <aside className="panel detail-info-card">
             <dl>
@@ -171,7 +175,7 @@ export function StudyDetail() {
             </dl>
           </aside>
           <section className="panel rules-panel">
-            <h2><span>≡</span> 규칙</h2>
+            <h2><span><img src={ruleIcon} alt="" /></span> 규칙</h2>
             {studyDetail.rules.map((rule) => <Rule key={rule.no} {...rule} />)}
           </section>
           <aside className="panel member-card">

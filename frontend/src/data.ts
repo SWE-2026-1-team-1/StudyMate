@@ -1,4 +1,4 @@
-import type { AttendanceMember, JoinRequest, ProgressStudy, ScreenId, StatusItem, Study, StudyMember, StudyRule, TeamMember, TeamPost } from "./types";
+import type { AttendanceMember, JoinRequest, ProgressStudy, ScreenId, StatusItem, Study, StudyMember, StudyRule, TeamMember, TeamPost, StudyDetailData } from "./types";
 
 export const screens: { id: ScreenId; label: string; group: string }[] = [
   { id: "login", label: "로그인", group: "인증" },
@@ -45,7 +45,14 @@ export const topics = ["#추천", "#전체", "#알고리즘", "#영어회화", "
 
 export const authInterestTags = ["#알고리즘", "#English", "#UI_Design", "#Macroeconomics"];
 
-export const studyDetail = {
+export const studyDetail: StudyDetailData = {
+  id: "biz-eng-01",
+  title: "비즈니스 영어 회화 실전",
+  subtitle: "실무 상황에서 바로 쓰는 영어 회화 스터디",
+  description: [
+    "이 스터디는 비즈니스 환경에서 자주 사용되는 영어 표현과 회화 패턴을 실전 중심으로 연습하는 것을 목표로 합니다. 회의, 이메일, 발표, 협상, 네트워킹 등 실제 업무 상황을 바탕으로 영어 표현을 익히고, 매주 롤플레이와 피드백을 통해 자연스럽게 말하는 능력을 향상시킵니다.",
+    "영어를 단순히 공부하는 것이 아니라 실제 상황에서 바로 사용할 수 있도록 반복 연습합니다.",
+  ],
   tags: ["# BUSINESS", "# ENGLISH", "# CONVERSATION"],
   location: "중앙도서관 4층 세미나실",
   info: [
@@ -58,12 +65,12 @@ export const studyDetail = {
     { no: "02", title: "영어로 말하기 우선", desc: "스터디 시간에는 가능한 한 영어로 대화하며, 실수를 피하기보다 말하는 연습에 집중합니다." },
     { no: "03", title: "적극적인 피드백 참여", desc: "롤플레이와 발표 후 서로의 표현, 발음, 전달 방식에 대해 간단한 피드백을 제공합니다." },
     { no: "04", title: "지각 및 결석 사전 공유", desc: "참여가 어려운 경우 모임 전까지 팀 게시판이나 채팅방에 미리 공유합니다." },
-  ] satisfies StudyRule[],
+  ],
   members: [
     { name: "김지우", role: "Leader / UX Designer", avatar: "a" },
     { name: "Lucas Meyer", role: "Product Designer", avatar: "b" },
     { name: "Priya Sharma", role: "UI Engineer", avatar: "c" },
-  ] satisfies StudyMember[],
+  ],
 };
 
 export const profile = {

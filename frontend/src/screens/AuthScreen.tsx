@@ -5,7 +5,7 @@ import { TagList } from "../components/TagInput";
 import { AvatarStack, Field } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
-import globeIcon from "../assets/Icon.svg";
+import globeIcon from "../assets/language.svg";
 
 type Language = { code: string; label: string };
 const LANGUAGES: Language[] = [

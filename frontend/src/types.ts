@@ -32,6 +32,23 @@ export type StudyMember = {
   avatar: string;
 };
 
+export type StudyInfoItem = {
+  label: string;
+  value: string;
+};
+
+export type StudyDetailData = {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string[];
+  tags: string[];
+  location: string;
+  info: StudyInfoItem[];
+  rules: StudyRule[];
+  members: StudyMember[];
+};
+
 export type ProgressStudy = {
   title: string;
   people: string;

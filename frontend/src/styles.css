@@ -1467,6 +1467,19 @@ textarea:focus {
   width: calc(235px * var(--ui-scale));
   height: calc(72px * var(--ui-scale));
   font-size: calc(23px * var(--ui-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(12px * var(--ui-scale));
+}
+.detail-actions .primary span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detail-actions .primary img {
+  width: calc(24px * var(--ui-scale));
+  height: calc(24px * var(--ui-scale));
 }
 .share {
   width: calc(74px * var(--ui-scale));
@@ -1476,6 +1489,13 @@ textarea:focus {
   background: #e9eef3;
   color: #4b5563;
   font-size: calc(30px * var(--ui-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share img {
+  width: calc(32px * var(--ui-scale));
+  height: calc(32px * var(--ui-scale));
 }
 .detail-grid {
   display: grid;
@@ -1486,10 +1506,22 @@ textarea:focus {
   padding: calc(38px * var(--ui-scale)) calc(44px * var(--ui-scale));
 }
 .panel h2 {
+  display: flex;
+  align-items: center;
+  gap: calc(14px * var(--ui-scale));
   margin: 0 0 calc(26px * var(--ui-scale));
   font-family: inherit;
   font-size: calc(29px * var(--ui-scale));
   font-weight: 500;
+}
+.panel h2 span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.panel h2 img {
+  width: calc(28px * var(--ui-scale));
+  height: calc(28px * var(--ui-scale));
 }
 .wide-panel p,
 .rule-row p {
