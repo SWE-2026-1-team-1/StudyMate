@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import type { ProgressStudy as ProgressStudyItem } from "../types";
+
+import { allMockStudies } from "../mockStudies";
 
 export function MainDashboard() {
   const navigate = useNavigate();
@@ -81,14 +83,41 @@ function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof us
 
 function ExploreResults() {
   const navigate = useNavigate();
+  const [selectedTopic, setSelectedTopic] = useState(topics[0]);
+
+  let title = `${selectedTopic.replace("#", "")} 추천 스터디`;
+  let subtitle = `${selectedTopic} 관련 선별된 스터디 그룹입니다.`;
+
+  if (selectedTopic === "#전체") {
+    title = "전체 스터디";
+    subtitle = "현재 모집 중인 모든 스터디 그룹입니다.";
+  } else if (selectedTopic === "#추천") {
+    title = "관심사 기반 추천 스터디";
+    subtitle = "관심사 기반으로 선별한 스터디 그룹입니다.";
+  }
+
+  // useMemo를 사용해 태그가 바뀔 때마다 스터디 목록을 셔플(무작위 정렬)합니다.
+  const displayedStudies = useMemo(() => {
+    let list = [];
+    if (selectedTopic === "#전체") {
+      list = [...allMockStudies];
+    } else if (selectedTopic === "#추천") {
+      list = allMockStudies.filter((study) => study.tags.includes("#프론트엔드") || study.tags.includes("#알고리즘"));
+    } else {
+      list = allMockStudies.filter((study) => study.tags.includes(selectedTopic));
+    }
+    // 간단한 무작위 셔플 로직 적용
+    return list.sort(() => Math.random() - 0.5);
+  }, [selectedTopic]);
 
   return (
-    <div className="dashboard-content-panel">
-      <TopicScroller />
+    <div className="dashboard-content-panel explore-panel">
+      <TopicScroller selectedTopic={selectedTopic} onSelect={setSelectedTopic} />
       <section className="section-block">
-        <SectionTitle title="관심사 기반 추천 스터디" subtitle="관심사 기반으로 선별한 스터디 그룹입니다." action="전체 보기  →" />
-        <div className="study-grid explore-grid">
-          {exploreStudies.map((study, index) => (
+        <SectionTitle title={title} subtitle={subtitle} />
+        {/* key에 selectedTopic을 주어 리액트가 아예 요소를 다시 그리게 만들어 진입 애니메이션을 재활성시킵니다 */}
+        <div key={selectedTopic} className="study-grid explore-grid">
+          {displayedStudies.map((study, index) => (
             <StudyCard key={`${study.title}-${index}`} study={study} action="신청하기" onAction={() => navigate(ROUTE_PATHS.studyDetail())} />
           ))}
         </div>
@@ -97,15 +126,13 @@ function ExploreResults() {
   );
 }
 
-function TopicScroller() {
-  const [selectedTopic, setSelectedTopic] = useState(topics[0]);
-
+function TopicScroller({ selectedTopic, onSelect }: { selectedTopic: string; onSelect: (topic: string) => void }) {
   return (
     <section className="topics">
       <h2>POPULAR TOPICS</h2>
       <div>
         {topics.map((topic) => (
-          <button className={selectedTopic === topic ? "active" : ""} key={topic} type="button" onClick={() => setSelectedTopic(topic)}>
+          <button className={selectedTopic === topic ? "active" : ""} key={topic} type="button" onClick={() => onSelect(topic)}>
             {topic}
           </button>
         ))}

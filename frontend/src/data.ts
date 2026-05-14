@@ -41,7 +41,7 @@ export const studies: Study[] = [
 
 export const exploreStudies = [...studies, ...studies, ...studies];
 
-export const topics = ["#전체", "#알고리즘", "#영어회화", "#프론트엔드", "#백엔드", "#UI/UX 디자인", "#데이터사이언스"];
+export const topics = ["#추천", "#전체", "#알고리즘", "#영어회화", "#프론트엔드", "#백엔드", "#UI/UX 디자인", "#데이터사이언스"];
 
 export const authInterestTags = ["#알고리즘", "#English", "#UI_Design", "#Macroeconomics"];
 

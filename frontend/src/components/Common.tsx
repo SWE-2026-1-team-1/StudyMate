@@ -123,7 +123,7 @@ export function SectionTitle({ title, subtitle, action }: { title: string; subti
 export function StudyCard({ study, action, onAction }: { study: Study; action: string; onAction: () => void }) {
   return (
     <article className="study-card">
-      <StudyThumb tone={study.tone} />
+      <StudyThumb title={study.title} />
       <div className="tag-row">{study.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
       <h3>{study.title}</h3>
       <p><span className="meta people">{study.people}</span><span className="meta time">{study.duration}</span></p>
@@ -165,17 +165,22 @@ export function Avatar({ name, className = "" }: { name: string; className?: str
   return <i className={`avatar portrait-${name} ${className}`} aria-hidden="true">{initial}</i>;
 }
 
-function StudyThumb({ tone }: { tone: Study["tone"] }) {
-  const thumbByTone: Record<Study["tone"], string> = {
-    tech: techStudyIcon,
-    english: englishStudyIcon,
-    algorithm: algorithmStudyIcon,
-    design: techStudyIcon,
-  };
+function StudyThumb({ title }: { title: string }) {
+  const pastelColors = [
+    "#fdf2f8", // 파스텔 핑크
+    "#eef2ff", // 파스텔 블루
+    "#f0fdf4", // 파스텔 민트
+    "#fffbeb", // 파스텔 옐로우
+    "#f5f3ff", // 파스텔 퍼플
+  ];
+
+  // 타이틀의 문자열 합을 이용해 색상을 일정하게 돌려가며 선택
+  const hash = title.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const bgColor = pastelColors[hash % pastelColors.length];
 
   return (
-    <div className={`study-thumb ${tone}`}>
-      <img src={thumbByTone[tone]} alt="" className="study-thumb-image" />
+    <div className="study-thumb text-thumb" style={{ background: bgColor }}>
+      <span className="thumb-title">{title}</span>
     </div>
   );
 }
