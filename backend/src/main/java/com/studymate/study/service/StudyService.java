@@ -205,7 +205,7 @@ public class StudyService {
 
     @Transactional
     public void delete(long userId, long studyId) {
-        Study study = studyRepository.findByIdAndIsDeletedFalse(studyId)
+        Study study = studyRepository.findByIdAndNotDeletedForUpdate(studyId)
                 .orElseThrow(() -> new StudyException(ErrorCode.NOT_FOUND, "스터디를 찾을 수 없습니다."));
 
         assertLeader(studyId, userId);

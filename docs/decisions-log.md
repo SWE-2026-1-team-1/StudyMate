@@ -16,6 +16,7 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 | 2026-05-20 | 채범수 | Sprint 3 설계 진입 전 SRS/API 명세 모호점 검토. `durationWeeks` / `languages` 누락 보강 (D-013), 모집 상태 OPEN ↔ CLOSED 양방향 전이 허용 (D-014), 본 스프린트 구현 디폴트 묶음 등록 (D-015). |
 | 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 TINYINT UNSIGNED를 INT UNSIGNED로 일괄 변경 (D-016). |
 | 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 study_member.left_reason 컬럼을 VARCHAR(20)로 변경 (D-017). |
+| 2026-05-20 | AI | 스터디 삭제 시 동시성 보장을 위해 비관적 락(Pessimistic Lock) 적용 (D-018). |
 
 ---
 
@@ -298,6 +299,12 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 - 출처: API 명세 시트 ↔ SRS RE-SF1-01 ↔ `docs/auth-class-design.md` §2.3, §3.1
 - 담당: 채범수
 - 상태: **CLOSED → D-008** (2026-05-12, 가정값 그대로 채택).
+
+### D-018. 스터디 삭제(soft delete) 시 비관적 락(Pessimistic Lock) 적용
+- 범위: Sprint 3 (스터디 CRUD)
+- 결정: 스터디 삭제(`delete`) 메서드 실행 시, `findByIdAndIsDeletedFalse` 대신 `findByIdAndNotDeletedForUpdate`를 호출하여 비관적 쓰기 락(`PESSIMISTIC_WRITE`)을 획득하도록 수정한다.
+- 근거: PR #15에 대한 Copilot pull request reviewer의 지적 사항 반영. 동일 스터디에 대해 수정(PATCH)과 삭제(DELETE) 요청이 동시에 처리될 때, 발생할 수 있는 데이터의 일관성 및 정합성 유실 문제를 방지하기 위함.
+- 영향 파일: `StudyService.java`
 
 ---
 
