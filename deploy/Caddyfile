@@ -1,0 +1,21 @@
+{
+	# 도메인 없음 → ACME 비활성화. HTTP only.
+	auto_https off
+}
+
+:80 {
+	encode gzip zstd
+
+	# 백엔드 API: /api/* 는 prefix 유지한 채 스프링으로 전달
+	# 스프링 컨트롤러가 /api/auth, /api/studies 로 매핑되어 있어 경로를 자르지 않음.
+	handle /api/* {
+		reverse_proxy localhost:8080
+	}
+
+	# 그 외 정적 SPA 자산. 클라이언트 라우팅용 fallback to index.html
+	handle {
+		root * /var/www/studymate
+		try_files {path} /index.html
+		file_server
+	}
+}
