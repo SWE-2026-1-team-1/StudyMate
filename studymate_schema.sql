@@ -111,7 +111,7 @@ CREATE TABLE tag (
 CREATE TABLE study_role (
     code                     VARCHAR(30) NOT NULL COMMENT '역할 코드',
     name                     VARCHAR(50) NOT NULL COMMENT '역할명',
-    sort_order               TINYINT UNSIGNED NOT NULL DEFAULT 99 COMMENT '정렬값',
+    sort_order               INT UNSIGNED NOT NULL DEFAULT 99 COMMENT '정렬값',
     can_approve_application  TINYINT(1) NOT NULL DEFAULT 0 COMMENT '신청 승인 가능 여부',
     can_manage_member        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '멤버 관리 가능 여부',
     can_create_attendance    TINYINT(1) NOT NULL DEFAULT 0 COMMENT '출석 세션 생성 가능 여부',
@@ -167,9 +167,10 @@ CREATE TABLE study (
     id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '스터디 번호',
     title                 VARCHAR(200)    NOT NULL COMMENT '제목',
     purpose               TEXT            NOT NULL COMMENT '목적 설명',
-    max_members           TINYINT UNSIGNED NOT NULL DEFAULT 10 COMMENT '최대 멤버 수',
-    current_member_count  TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '현재 활성 멤버 수 (서비스 레이어 유지, D-003)',
+    max_members           INT UNSIGNED NOT NULL DEFAULT 10 COMMENT '최대 멤버 수',
+    current_member_count  INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '현재 활성 멤버 수 (서비스 레이어 유지, D-003)',
     activity_cycle        VARCHAR(100)    NOT NULL COMMENT '활동 빈도',
+    duration_weeks        INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '활동 기간(주) — D-013',
     status                ENUM('OPEN','CLOSED','CANCELLED') NOT NULL DEFAULT 'OPEN' COMMENT '모집 상태',
     is_deleted            TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '소프트 삭제 여부',
     created_at            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
@@ -200,6 +201,21 @@ CREATE TABLE study_tag (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='스터디 태그 테이블';
 
 -- ================================================================
+-- 8-1. 스터디 언어 테이블 (D-013 신규)
+-- ================================================================
+CREATE TABLE study_language (
+    study_id      BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
+    language_code VARCHAR(30)     NOT NULL COMMENT '언어 코드 (예: ko/en/zh)',
+    created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (study_id, language_code),
+    CONSTRAINT fk_study_language_study
+        FOREIGN KEY (study_id) REFERENCES study (id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='스터디 사용 언어 (D-013)';
+
+-- ================================================================
 -- 8. 스터디 멤버 테이블: 보존형 히스토리 (탈퇴 시 row 삭제 대신 is_active=0)
 --   (서비스 레이어 담당)
 --     - 활성 멤버 유일성: 같은 (study_id, user_id) 에 is_active=1 row 1건만 허용
@@ -218,7 +234,7 @@ CREATE TABLE study_member (
     is_active               TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '활성 멤버 여부',
     joined_at               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '가입 시각',
     left_at                 DATETIME        DEFAULT NULL COMMENT '탈퇴 시각',
-    left_reason             ENUM('VOLUNTARY','KICKED','STUDY_CLOSED') DEFAULT NULL COMMENT '탈퇴 사유',
+    left_reason             VARCHAR(20)     DEFAULT NULL COMMENT '탈퇴 사유',
     created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
     updated_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 
@@ -323,7 +339,7 @@ CREATE TABLE notification (
 CREATE TABLE attendance_session (
     id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '출석 세션 번호',
     study_id              BIGINT UNSIGNED NOT NULL COMMENT '스터디 번호',
-    session_num           TINYINT UNSIGNED NOT NULL COMMENT '세션 번호',
+    session_num           INT UNSIGNED NOT NULL COMMENT '세션 번호',
     session_date          DATE NOT NULL COMMENT '활동 일자',
     title                 VARCHAR(200) DEFAULT NULL COMMENT '세션 제목',
     created_by_member_id  BIGINT UNSIGNED NOT NULL COMMENT '생성 멤버 번호',
