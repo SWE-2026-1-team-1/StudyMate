@@ -1688,7 +1688,7 @@ input:disabled {
 .profile-hero {
   position: relative;
   display: grid;
-  grid-template-columns: calc(150px * var(--ui-scale)) 1fr calc(170px * var(--ui-scale));
+  grid-template-columns: calc(150px * var(--ui-scale)) 1fr auto;
   gap: calc(42px * var(--ui-scale));
   align-items: center;
   min-height: calc(205px * var(--ui-scale));
@@ -1751,6 +1751,28 @@ input:disabled {
   font-size: calc(22px * var(--ui-scale));
   font-weight: 600;
 }
+.profile-text-lines small,
+.profile-text-lines em {
+  color: #7a8798;
+  font-size: calc(16px * var(--ui-scale));
+  font-style: normal;
+  font-weight: 600;
+}
+.profile-text-lines em {
+  max-width: calc(660px * var(--ui-scale));
+  line-height: 1.5;
+}
+.profile-feedback {
+  margin: calc(14px * var(--ui-scale)) 0 0;
+  font-size: calc(15px * var(--ui-scale));
+  font-weight: 700;
+}
+.profile-feedback.success {
+  color: #0f8f63;
+}
+.profile-feedback.error {
+  color: #dc2626;
+}
 .profile-copy > .keyword-set {
   margin-top: calc(24px * var(--ui-scale));
 }
@@ -1780,6 +1802,38 @@ input:disabled {
   z-index: 1;
   height: calc(64px * var(--ui-scale));
   font-size: calc(18px * var(--ui-scale));
+  white-space: nowrap;
+}
+.profile-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--ui-scale));
+}
+.profile-plain-button,
+.profile-danger-row button {
+  border: calc(1px * var(--ui-scale)) solid #d7deea;
+  border-radius: calc(16px * var(--ui-scale));
+  padding: calc(14px * var(--ui-scale)) calc(20px * var(--ui-scale));
+  background: #fff;
+  color: #617086;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 700;
+}
+.profile-danger-row {
+  display: flex;
+  justify-content: flex-end;
+}
+.profile-danger-row button {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #dc2626;
+}
+.profile-actions button:disabled,
+.profile-danger-row button:disabled {
+  cursor: default;
+  opacity: 0.62;
 }
 .profile-grid {
   display: grid;
@@ -2570,6 +2624,14 @@ input:disabled {
   .split-fields,
   .category-grid {
     grid-template-columns: 1fr;
+  }
+  .profile-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .profile-hero .primary,
+  .profile-plain-button {
+    width: 100%;
   }
   .auth-frame {
     border-radius: calc(30px * var(--ui-scale));

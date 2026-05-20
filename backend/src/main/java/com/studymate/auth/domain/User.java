@@ -20,6 +20,18 @@ public class User {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(length = 100)
+    private String school;
+
+    @Column(length = 100)
+    private String major;
+
+    @Column(length = 255)
+    private String bio;
+
+    @Column(length = 500)
+    private String interestTags;
+
     @Column(nullable = false)
     private boolean isEmailVerified = false;
 
@@ -48,10 +60,28 @@ public class User {
         return user;
     }
 
+    public void updateProfile(String name, String school, String major, String bio, String interestTags, Instant now) {
+        this.name = name;
+        this.school = school;
+        this.major = major;
+        this.bio = bio;
+        this.interestTags = interestTags;
+        this.updatedAt = now;
+    }
+
+    public void delete(Instant now) {
+        this.isDeleted = true;
+        this.updatedAt = now;
+    }
+
     public Long getId()            { return id; }
     public String getEmail()       { return email; }
     public String getPasswordHash(){ return passwordHash; }
     public String getName()        { return name; }
+    public String getSchool()      { return school; }
+    public String getMajor()       { return major; }
+    public String getBio()         { return bio; }
+    public String getInterestTags(){ return interestTags; }
     public boolean isEmailVerified(){ return isEmailVerified; }
     public boolean isDeleted()     { return isDeleted; }
     public Instant getCreatedAt()  { return createdAt; }

@@ -16,7 +16,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     // - JwtAuthenticationFilter 에서 userId(String) 로 호출
     public UserDetails loadUserByUserId(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
         return new CustomUserDetails(user);
     }

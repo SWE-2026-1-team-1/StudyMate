@@ -1,4 +1,4 @@
-import { publicApiClient } from "./client";
+import { apiClient, publicApiClient } from "./client";
 
 export type SignupData = {
   email: string;
@@ -19,7 +19,7 @@ export const authApi = {
   },
   // 로그아웃
   logout: async (data: { refreshToken: string }) => {
-    const response = await publicApiClient.post("/api/auth/logout", data);
+    const response = await apiClient.post("/api/auth/logout", data);
     return response.data;
   },
   // 인증코드 전송

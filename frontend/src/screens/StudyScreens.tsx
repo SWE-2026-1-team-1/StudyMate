@@ -4,6 +4,7 @@ import { authInterestTags, createStudy, exploreStudies, profile, studies, studyD
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
+import { profileApi, type ProfilePayload, type ProfileResponse } from "../api/profile";
 
 import { allMockStudies } from "../mockStudies";
 
@@ -193,10 +194,56 @@ export function StudyDetail() {
 
 export function MyPage() {
   const navigate = useNavigate();
-  const [interestTags, setInterestTags] = useState<string[]>(profile.interestKeywords);
+  const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
+  const [interestTags, setInterestTags] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profileName, setProfileName] = useState("박지민 (Jimin Park)");
-  const [profileSchool, setProfileSchool] = useState("Ajou University 3학년");
+  const [profileName, setProfileName] = useState("");
+  const [profileSchool, setProfileSchool] = useState("");
+  const [profileMajor, setProfileMajor] = useState("");
+  const [profileBio, setProfileBio] = useState("");
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadProfile = async () => {
+      setIsLoadingProfile(true);
+      setProfileError("");
+      if (!localStorage.getItem("accessToken")) {
+        setProfileError("로그인 후 프로필을 관리할 수 있습니다.");
+        setIsLoadingProfile(false);
+        return;
+      }
+      try {
+        const data = await profileApi.get();
+        if (ignore) return;
+        applyProfile(data);
+      } catch {
+        if (!ignore) {
+          setProfileError("프로필을 불러오지 못했습니다. 로그인 후 다시 시도해주세요.");
+        }
+      } finally {
+        if (!ignore) setIsLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const applyProfile = (data: ProfileResponse) => {
+    setProfileData(data);
+    setProfileName(data.name ?? "");
+    setProfileSchool(data.school ?? "");
+    setProfileMajor(data.major ?? "");
+    setProfileBio(data.bio ?? "");
+    setInterestTags(data.interestTags ?? []);
+  };
 
   const handleRemoveInterestTag = (tagToRemove: string) => {
     setInterestTags(interestTags.filter((tag) => tag !== tagToRemove));
@@ -208,6 +255,71 @@ export function MyPage() {
       setInterestTags([...interestTags, normalizedTag]);
     }
   };
+
+  const buildPayload = (): ProfilePayload => ({
+    name: profileName.trim(),
+    school: profileSchool.trim() || null,
+    major: profileMajor.trim() || null,
+    bio: profileBio.trim() || null,
+    interestTags,
+  });
+
+  const handleEditButton = async () => {
+    setProfileMessage("");
+    setProfileError("");
+
+    if (!isEditingProfile) {
+      setIsEditingProfile(true);
+      return;
+    }
+
+    if (!profileName.trim()) {
+      setProfileError("이름을 입력해주세요.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const payload = buildPayload();
+      const saved = profileData ? await profileApi.update(payload) : await profileApi.create(payload);
+      applyProfile(saved);
+      setIsEditingProfile(false);
+      setProfileMessage("프로필이 저장되었습니다.");
+    } catch {
+      setProfileError("프로필 저장에 실패했습니다.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (profileData) {
+      applyProfile(profileData);
+    }
+    setIsEditingProfile(false);
+    setProfileMessage("");
+    setProfileError("");
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!window.confirm("프로필과 계정을 삭제하시겠습니까?")) return;
+
+    setIsSavingProfile(true);
+    setProfileMessage("");
+    setProfileError("");
+    try {
+      await profileApi.remove();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
+      navigate(ROUTE_PATHS.login);
+    } catch {
+      setProfileError("프로필 삭제에 실패했습니다.");
+      setIsSavingProfile(false);
+    }
+  };
+
+  const schoolLine = [profileSchool, profileMajor].filter(Boolean).join(" · ");
 
   return (
     <main className="profile-page content-container">
@@ -221,23 +333,48 @@ export function MyPage() {
             <div className="profile-edit-fields">
               <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" />
               <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" />
+              <input value={profileMajor} onChange={(event) => setProfileMajor(event.target.value)} aria-label="전공 정보" />
+              <input value={profileBio} onChange={(event) => setProfileBio(event.target.value)} aria-label="프로필 소개" />
             </div>
           ) : (
             <div className="profile-text-lines">
-              <h1>{profileName}</h1>
-              <p>{profileSchool}</p>
+              <h1>{isLoadingProfile ? "프로필을 불러오는 중" : profileName || "이름 없음"}</h1>
+              <p>{schoolLine || "학교와 전공을 입력해주세요"}</p>
+              {profileData?.email && <small>{profileData.email}</small>}
+              {profileBio && <em>{profileBio}</em>}
             </div>
           )}
+          {(profileMessage || profileError) && (
+            <p className={`profile-feedback ${profileError ? "error" : "success"}`}>
+              {profileError || profileMessage}
+            </p>
+          )}
         </div>
-        <button className="primary" type="button" onClick={() => setIsEditingProfile(!isEditingProfile)}>
-          {isEditingProfile ? "저장하기" : "프로필 편집"}
-        </button>
+        <div className="profile-actions">
+          <button className="primary" type="button" disabled={isLoadingProfile || isSavingProfile || !profileData} onClick={handleEditButton}>
+            {isSavingProfile ? "저장 중" : isEditingProfile ? "저장하기" : "프로필 편집"}
+          </button>
+          {isEditingProfile && (
+            <button className="profile-plain-button" type="button" disabled={isSavingProfile} onClick={handleCancelEdit}>
+              취소
+            </button>
+          )}
+        </div>
       </section>
       <section className="profile-grid">
         <div className="profile-study-section">
           <Panel title="" className="keyword-panel keyword-strip">
-            <TagList tags={interestTags} onRemoveTag={handleRemoveInterestTag} onAddTag={handleAddInterestTag} />
+            <TagList
+              tags={interestTags}
+              onRemoveTag={isEditingProfile ? handleRemoveInterestTag : undefined}
+              onAddTag={isEditingProfile ? handleAddInterestTag : undefined}
+            />
           </Panel>
+          <div className="profile-danger-row">
+            <button type="button" disabled={isSavingProfile || !profileData} onClick={handleDeleteProfile}>
+              계정 삭제
+            </button>
+          </div>
           <h2>참여 중인 스터디</h2>
           <div className="study-grid profile-study-grid">
             {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => navigate(ROUTE_PATHS.teamBoard())} />)}
