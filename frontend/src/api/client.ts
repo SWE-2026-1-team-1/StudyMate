@@ -1,14 +1,14 @@
 import axios from "axios";
 
 export const apiClient = axios.create({
-  baseURL: "", // Using Vite proxy, so we leave baseURL empty to hit /api directly (e.g. /api/auth/login)
+  baseURL: "http://13.125.11.104:8080",
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 export const publicApiClient = axios.create({
-  baseURL: "",
+  baseURL: "http://13.125.11.104:8080",
   headers: {
     "Content-Type": "application/json",
   },
