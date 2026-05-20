@@ -12,6 +12,9 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 | 2026-05-12 | 채범수 | 미해결 P 항목 일괄 정리. DB 작업 인계받아 `tmp(2).sql` → `studymate_schema.sql` 정비 (P-001 → D-006). Logout 정책 단일 세션 확정 (P-007 → D-007). 이메일 인증 정책 상수 확정 (P-008 → D-008). P-002 / P-003 / P-004 / P-006 수정안 확정 (외부 문서 적용 대기 상태로 전환). DB 담당 채범수로 이관. |
 | 2026-05-12 | 채범수 | P-003 / P-004 / P-006 외부 문서 적용 완료 (SRS Google Docs · 작업 시트 · API 명세 시트). 모두 CLOSED 처리. 남은 미해결은 P-005 (Sprint 2 종료 후 정리) 뿐. |
 | 2026-05-12 | 채범수 | 동시성 테스트 스코프 제외 결정 (D-009). 테스트 통합 DB 도 H2 로 확정. |
+| 2026-05-14 | 채범수 | Sprint 3 (스터디 CRUD) 진입. 스터디 = 모집글 = 팀 스페이스 통합 모델 확정 (D-010). 모집 인원(maxMembers) 변경 룰 확정 (D-011). 스터디 생성 시 LEADER 멤버 row 동시 생성 명문화 (D-012). |
+| 2026-05-20 | 채범수 | Sprint 3 설계 진입 전 SRS/API 명세 모호점 검토. `durationWeeks` / `languages` 누락 보강 (D-013), 모집 상태 OPEN ↔ CLOSED 양방향 전이 허용 (D-014), 본 스프린트 구현 디폴트 묶음 등록 (D-015). |
+| 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 TINYINT UNSIGNED를 INT UNSIGNED로 일괄 변경 (D-016). |
 
 ---
 
@@ -102,6 +105,123 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
   - `docs/auth-test-plan.md` §5 동시성 테스트 섹션 제거. §2 / §3 / §7 / §8 의 동시성·MySQL 관련 언급 정리. §3 DB 결정 H2 로 갱신.
   - P-002 의 "동시성 정합성 검증을 통합 테스트로" 결정은 본 D-009 로 효력 변경: 통합 테스트 자체를 안 쓴다. SRS 검사기준 RE-NF-06 (인증 관련 부분) 은 본 스프린트에서 코드 레벨 방어로만 닫고, 회귀 테스트는 두지 않는다.
 - 후속: 운영 단계에서 필요 시 다시 도입. 그 시점에 본 결정을 새 D-번호로 reopen.
+
+### D-010. 스터디 = 모집글 = 팀 스페이스 통합 모델 (별도 team 테이블 없음)
+- 범위: Sprint 3 ~ 전체
+- 결정:
+  - 도메인 개념 "스터디", "모집글", "팀 전용 공간" 셋은 모두 동일한 `study` row 의 라이프사이클 표현이다. 별도 `team` 테이블/엔티티는 두지 않는다.
+  - SRS RE-SF4-01 "팀 전용 공간 자동 생성" 의 구현 의미는 *별도 자원 생성 없음, 같은 `study` row 의 `status` 가 OPEN → CLOSED 로 전이되는 것* 으로 본다.
+  - API URL 의 `/api/teams/{teamId}/...` 는 같은 study 에 대한 *활동 단계 API 별명*. 응답 본문에서 `teamId` 가 필요한 자리에는 `studyId` 와 동일한 값을 채워 응답한다.
+  - DB 스키마 변경 없음. `post` / `post_comment` / `attendance_session` / `attendance_record` 의 FK 는 `study_id` 그대로 유지.
+- 근거:
+  - 학교 프로젝트 규모상 team 이 study 와 독립적으로 가져야 할 메타데이터가 현재 없음. team 테이블을 두면 study 와 1:1 FK 이상의 역할을 하지 못해 모델 복잡도만 증가.
+  - 통합 모델은 트랜잭션 경계가 단순하고 마이그레이션 부담이 0. SRS 의 "팀" 어휘는 도메인 인스턴스가 아닌 라이프사이클 *단계*로 해석.
+  - SRS 자체에는 "팀이 study 와 별개 엔티티" 라는 명시는 없음. RE-SF2-01 / RE-SF4-01 의 표현이 단계 전이로 자연스럽게 읽힘.
+- 영향:
+  - **작업 시트 4주차 #29 "팀 전용 공간 생성" → 별도 작업 없음.** 시트 비고에 *"D-010 에 따라 별도 자원 생성 없음 (study 생성/마감으로 충족)"* 명시 필요.
+  - 작업 시트 #23 ~ #25 비고에 본 결정 명시 필요.
+  - API 명세 시트: `/api/teams/{teamId}/...` 엔드포인트의 `teamId` 파라미터 의미를 *`studyId` 와 동일* 로 비고에 명시 필요.
+  - "내 스터디 목록 조회" 응답의 `teamId` 필드는 `studyId` 와 동일한 값으로 채움.
+- 후속: 외부 문서(시트) 반영은 본 결정 이후 marcus 가 외부에서 진행.
+
+### D-011. 모집 인원(maxMembers) 변경 룰
+- 범위: Sprint 3 (스터디 수정)
+- 결정:
+  - `PATCH /api/studies/{id}` 의 `maxMembers` 변경 시 `maxMembers ≥ current_member_count` 가 항상 보장되어야 한다.
+  - 위반 시 응답: `409 INVALID_MAX_MEMBERS`, message: *"현재 멤버 수보다 작게 줄일 수 없습니다. 먼저 팀원을 강퇴해 주세요."*. 새 `ErrorCode.INVALID_MAX_MEMBERS` 신설.
+  - 더 작게 줄이려면 사전에 강퇴 (RE-SF4-04, 4주차) 처리 필요. 본 스프린트 응답에서 그 안내만.
+- 근거: 활성 멤버 수가 모집 정원을 초과하는 inconsistency 방지. SRS 직접 표현은 없지만 자연스러운 운영 규칙이며, marcus 가 본 세션에서 명시.
+- 후속:
+  - `PATCH /api/studies/{id}` 의 `maxMembers` 필드 검증 로직 (서비스 레이어, `study` row 락 하에).
+  - 새 `ErrorCode.INVALID_MAX_MEMBERS` (HTTP 409) 추가.
+  - API 명세 시트의 "스터디 수정" row 에러 칼럼에 본 케이스 추가 필요.
+
+### D-012. 스터디 생성 시 LEADER `study_member` row 동시 생성 (트랜잭션 내)
+- 범위: Sprint 3 (스터디 생성)
+- 결정:
+  - `POST /api/studies` 처리 시 `study` row 와 `study_member`(`role_code='LEADER'`, `is_active=1`) row 를 **같은 트랜잭션 안에서 동시 생성**한다.
+  - `study.current_member_count` 는 생성 시점에 `1` 로 박는다.
+  - 태그가 있다면 `study_tag` row 도 같은 트랜잭션에 INSERT.
+- 근거: D-003 (트리거 금지) 의 직접적 후속. 이전 트리거가 자동 INSERT 하던 LEADER 멤버 row 와 카운트 증분을 서비스 레이어가 명시적으로 책임짐.
+- 후속:
+  - `StudyService.create(...)` 의 트랜잭션 경계는 `study` + `study_member` + `study_tag` 까지 한 단위.
+  - SRS RE-SF2-01 본문 *"개설자는 스터디장(리더)으로 자동 지정된다"* 의 구현 매핑.
+
+### D-013. SRS 입력 필드 정합 — `durationWeeks` / `languages` API body 보강 (필수)
+- 범위: Sprint 3 (스터디 생성 / 수정 / 상세 / 목록)
+- 결정:
+  - SRS RE-SF2-01 의 7개 입력 필드 (스터디명·소개·모집 인원·활동 주기·활동 기간·관심 태그·사용 언어) 가 API 명세 시트의 `POST /api/studies` body 에 모두 반영되도록 한다. 현재 누락된 두 필드는 **둘 다 필수**로 추가한다.
+  - 보강 필드:
+    - `durationWeeks: int` — 활동 기간(주). 양의 정수. `>= 1`.
+    - `languages: string[]` — 사용 언어 태그 배열. 빈 배열 불가 (최소 1개). 회원 프로필 언어와 동일한 어휘 사용.
+  - 적용 위치:
+    - `POST /api/studies` request body: 두 필드 추가, 필수.
+    - `PATCH /api/studies/{id}` request body: 두 필드 옵셔널(부분 수정, 미전송 시 변경 없음).
+    - `GET /api/studies/{id}` response: 두 필드 포함.
+    - `GET /api/studies` (목록) response: 카드용 요약이라 본 스프린트에선 미포함 (필요 시 다음 스프린트 추가).
+- 근거: SRS 가 입력으로 정의한 필드가 API 명세에 빠져 있으면 검사기준 RE-SF2-01 ("입력한 스터디 정보와 일치") 가 검증 불가. SRS 를 진실로 두고 명세를 맞춤.
+- 후속:
+  - DB: `study.duration_weeks INT NOT NULL`, `study_language(study_id, language_code)` 신규 테이블. `study_tag` 와 동일한 패턴.
+  - API 명세 시트: 본 결정 이후 marcus 가 외부에서 시트 갱신.
+  - 응답 스키마 정비도 본 결정에 묶음 — 상세 조회 응답에 누락된 `durationWeeks` / `languages` / `status` 일괄 포함.
+
+### D-014. 모집 상태 전이 — OPEN ↔ CLOSED 양방향 허용 (재오픈 가능)
+- 범위: Sprint 3 (`PATCH /api/studies/{id}` status 변경)
+- 결정:
+  - 스터디장이 `PATCH` 로 `status` 를 `OPEN` ↔ `CLOSED` 양방향으로 전환할 수 있다. 실수 마감 복구 / 추가 모집 재개 시나리오 지원.
+  - 단, `CLOSED → OPEN` 재오픈 시점에 `current_member_count >= maxMembers` 이면 모집이 즉시 다시 가득 차므로 의미상 무효 → **`409 INVALID_STATUS_TRANSITION`** 응답. (이 케이스만 차단.)
+  - 정원 도달에 의한 자동 마감(5주차 신청 수락 흐름) 은 본 결정과 독립. 자동 마감 후의 수동 재오픈 자체는 허용.
+- 근거: 학교 프로젝트 운영상 마감 실수 복구가 합리적 요구. SRS RE-SF2-02 의 "마감 후 기존 팀 구성에 영향 주는 수정 제한" 은 `maxMembers` 축소 같은 멤버 영향 변경에 대한 것이고, 단순 상태 토글은 팀 구성에 영향 없음.
+- 후속:
+  - `ErrorCode.INVALID_STATUS_TRANSITION` (HTTP 409) 신규.
+  - API 명세 시트의 "모집 마감" row 설명을 *"스터디장이 모집 상태를 변경한다 (OPEN ↔ CLOSED)"* 로 갱신 + `INVALID_STATUS_TRANSITION` 에러 케이스 추가.
+  - 본 결정에 따라 시트의 "스터디 수정" / "모집 마감" 두 row 는 사실상 같은 엔드포인트(PATCH) 의 두 사용 패턴 — 한 핸들러에서 처리 (claude-context §1 의 통합 처리와 정합).
+
+### D-015. Sprint 3 구현 디폴트 묶음 (Marcus 결정 위임 → 일괄 채택)
+- 범위: Sprint 3 (스터디 CRUD) 구현 디테일
+- 결정 (한 묶음으로 채택, 향후 운영에서 필요 시 개별 재검토):
+  - **목록 조회 (`GET /api/studies`)**
+    - 인증: **필수** (Bearer 토큰). 모든 스터디 API 인증 필수로 통일.
+    - 기본 정렬: **`created_at DESC`** (SRS RE-SF2-03 "최신순").
+    - status 필터: **본 스프린트는 OPEN 만 노출**. (CLOSED 도 보고 싶다는 요구는 검색/내 스터디 등 다음 스프린트 도메인에서 다룸.)
+    - 페이징 디폴트: `page=0, size=20`. `size` 상한 `100`.
+  - **상세 조회 (`GET /api/studies/{id}`)**: 인증 필수. 본인 LEADER 여부 등 사용자 컨텍스트 필드는 본 스프린트에선 응답에 포함하지 않음 (마이페이지 / 내 스터디 도메인 책임).
+  - **PATCH 시멘틱**: **필드 미전송 = 변경 없음 / 필드 명시 = 해당 값으로 변경**. `null` 명시는 본 스프린트에선 *유효하지 않은 요청* 으로 거절 (400 INVALID_INPUT) — 모든 필드가 not-null 비즈니스 필드라 null 의 의미가 없음.
+  - **마감 후 수정 허용 필드**: `CLOSED` 상태에서도 `title` / `description` / `tags` / `languages` 수정 허용. `maxMembers` / `durationWeeks` / `meetingCycle` 은 팀 구성·운영에 영향 → **마감 상태에선 거절 (`409 INVALID_STATUS_FOR_UPDATE`)**.
+  - **maxMembers 범위**: `2 ≤ maxMembers ≤ 50`. 하한 2 (개설자 LEADER 1명 외 최소 1명 모집 필요), 상한 50 (학교 프로젝트 규모).
+  - **durationWeeks 범위**: `1 ≤ durationWeeks ≤ 52`.
+  - **meetingCycle**: **freeform string, 최대 50자**. enum 까지 박으면 표현력 제약. UI 에서 추천값 (주1회/주2회/격주/월1회 …) 정도만 안내.
+  - **title 길이**: 최소 2, 최대 50자.
+  - **description 길이**: 최대 2000자.
+  - **tags / languages**: 각 배열 원소 길이 1~30자, 배열당 최대 10개, 중복 불가 (서버에서 dedupe 후 비교).
+  - **DELETE 방식**: **soft delete**. `study.is_deleted = 1` 로 표시, row 물리 삭제하지 않음. 모든 조회/수정/신청 쿼리는 `is_deleted = 0` 조건을 기본 깔고 동작. 본 스프린트 시점엔 자식 테이블(`study_member` / `study_tag` / `study_language`) 도 그대로 두고 부모 플래그만 변경 — 자식 데이터를 보존해야 향후 통계/히스토리 활용 가능. 이후 도메인 (application / post / attendance 등) 추가 시 각자 `is_deleted` 조건을 자기 쿼리에 끼워 넣는다.
+  - **응답 ↔ DB 필드명 정합**: API 명세 어휘를 진실로 두고 DTO 매핑에서 변환. DB `purpose` ↔ API `description`, DB `activity_cycle` ↔ API `meetingCycle`. ALTER 로 컬럼명 바꿀 만큼의 가치는 없음 (스키마 안정성 우선).
+  - **`study.status` ENUM**: `CANCELLED` 값은 본 스프린트에서 사용하지 않음. 향후 별도 결정 시까지 그대로 두되 서비스 레이어는 `OPEN` / `CLOSED` 두 값만 생산.
+- 근거: 위 항목들은 marcus 가 위임한 디폴트. 모두 학교 프로젝트 규모/시연 우선 원칙에 정합. 실 운영 도입 시 개별 결정으로 재오픈.
+- 후속:
+  - `ErrorCode.INVALID_STATUS_FOR_UPDATE` (HTTP 409) 신규.
+  - DTO Bean Validation 어노테이션 / 응답 페이지 구조는 본 결정값 그대로 적용.
+
+### D-016. 스키마 컬럼 타입 불일치 해결 — TINYINT UNSIGNED → INT UNSIGNED 변환
+- 범위: 전체 DB 스키마 (MySQL)
+- 결정:
+  - MySQL 테이블에서 사용된 `TINYINT UNSIGNED` 타입 컬럼들을 `INT UNSIGNED`로 변경한다.
+  - 대상 컬럼:
+    - `study.max_members`
+    - `study.current_member_count`
+    - `study.duration_weeks`
+    - `study_role.sort_order`
+    - `attendance_session.session_num`
+  - H2는 자동 생성 방식(create-drop)이므로 별도 대처 불필요. 실제 MySQL DB(로컬 및 운영 EC2)에 대해 다음 ALTER 명령을 실행하여 마이그레이션한다:
+    ```sql
+    ALTER TABLE study_role MODIFY COLUMN sort_order INT UNSIGNED NOT NULL DEFAULT 99 COMMENT '정렬값';
+    ALTER TABLE study MODIFY COLUMN max_members INT UNSIGNED NOT NULL DEFAULT 10 COMMENT '최대 멤버 수';
+    ALTER TABLE study MODIFY COLUMN current_member_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '현재 활성 멤버 수 (서비스 레이어 유지, D-003)';
+    ALTER TABLE study MODIFY COLUMN duration_weeks INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '활동 기간(주) — D-013';
+    ALTER TABLE attendance_session MODIFY COLUMN session_num INT UNSIGNED NOT NULL COMMENT '세션 번호';
+    ```
+- 근거: Java의 `int` / `Integer` 타입 필드가 Hibernate ddl-auto: validate 유효성 검사 시 MySQL의 `TINYINT UNSIGNED` 컬럼과 매핑될 때 `INTEGER` 기대 타입 불일치(wrong column type encountered) 에러가 발생하여 앱 기동이 실패함. 이를 일치시키기 위해 스키마와 데이터베이스 컬럼의 물리적 크기를 `INT UNSIGNED`로 넓힘.
+- 후속: `studymate_schema.sql` 갱신 및 EC2 MySQL DB에 ALTER 명령어 적용 완료.
 
 ---
 
