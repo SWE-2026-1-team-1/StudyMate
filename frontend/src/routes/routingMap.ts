@@ -18,7 +18,7 @@ export type RouteConfig = {
 export const ROUTE_PATHS = {
   login: "/login",
   signup: "/signup",
-  home: "/",
+  home: "/home",
   studies: "/studies",
   studyDetail: (studyId = "business-english") => `/studies/${studyId}`,
   createBasic: "/studies/new/basic",

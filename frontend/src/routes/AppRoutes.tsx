@@ -10,13 +10,15 @@ import { ROUTE_PATHS } from "./routingMap";
 export function AppRoutes() {
   return (
     <Routes>
+      <Route index element={<Navigate to={ROUTE_PATHS.login} replace />} />
+
       <Route element={<AuthLayout />}>
         <Route path={ROUTE_PATHS.login} element={<AuthScreen mode="login" />} />
         <Route path={ROUTE_PATHS.signup} element={<AuthScreen mode="signup" />} />
       </Route>
 
       <Route element={<AppLayout />}>
-        <Route index element={<MainDashboard />} />
+        <Route path={ROUTE_PATHS.home} element={<MainDashboard />} />
         <Route path="studies" element={<ExplorePage />} />
         <Route path="studies/:studyId" element={<StudyDetail />} />
         <Route path="studies/new" element={<Navigate to={ROUTE_PATHS.createBasic} replace />} />
