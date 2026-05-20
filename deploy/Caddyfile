@@ -18,8 +18,4 @@
 		try_files {path} /index.html
 		file_server
 	}
-
-	log {
-		output file /var/log/caddy/studymate-access.log
-	}
 }
