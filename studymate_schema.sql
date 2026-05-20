@@ -230,7 +230,7 @@ CREATE TABLE study_member (
     is_active               TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '활성 멤버 여부',
     joined_at               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '가입 시각',
     left_at                 DATETIME        DEFAULT NULL COMMENT '탈퇴 시각',
-    left_reason             ENUM('VOLUNTARY','KICKED','STUDY_CLOSED') DEFAULT NULL COMMENT '탈퇴 사유',
+    left_reason             VARCHAR(20)     DEFAULT NULL COMMENT '탈퇴 사유',
     created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 시각',
     updated_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 시각',
 

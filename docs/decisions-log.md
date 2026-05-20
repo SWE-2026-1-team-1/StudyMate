@@ -15,6 +15,7 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 | 2026-05-14 | 채범수 | Sprint 3 (스터디 CRUD) 진입. 스터디 = 모집글 = 팀 스페이스 통합 모델 확정 (D-010). 모집 인원(maxMembers) 변경 룰 확정 (D-011). 스터디 생성 시 LEADER 멤버 row 동시 생성 명문화 (D-012). |
 | 2026-05-20 | 채범수 | Sprint 3 설계 진입 전 SRS/API 명세 모호점 검토. `durationWeeks` / `languages` 누락 보강 (D-013), 모집 상태 OPEN ↔ CLOSED 양방향 전이 허용 (D-014), 본 스프린트 구현 디폴트 묶음 등록 (D-015). |
 | 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 TINYINT UNSIGNED를 INT UNSIGNED로 일괄 변경 (D-016). |
+| 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 study_member.left_reason 컬럼을 VARCHAR(20)로 변경 (D-017). |
 
 ---
 
@@ -222,6 +223,13 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
     ```
 - 근거: Java의 `int` / `Integer` 타입 필드가 Hibernate ddl-auto: validate 유효성 검사 시 MySQL의 `TINYINT UNSIGNED` 컬럼과 매핑될 때 `INTEGER` 기대 타입 불일치(wrong column type encountered) 에러가 발생하여 앱 기동이 실패함. 이를 일치시키기 위해 스키마와 데이터베이스 컬럼의 물리적 크기를 `INT UNSIGNED`로 넓힘.
 - 후속: `studymate_schema.sql` 갱신 및 EC2 MySQL DB에 ALTER 명령어 적용 완료.
+
+### D-017. 스키마 컬럼 타입 불일치 해결 — study_member.left_reason 컬럼 ENUM -> VARCHAR(20) 변환
+- 범위: 전체 DB 스키마 (MySQL)
+- 결정:
+  - MySQL `study_member` 테이블의 `left_reason` 컬럼 타입을 `ENUM('VOLUNTARY','KICKED','STUDY_CLOSED')`에서 `VARCHAR(20)`로 변경한다.
+- 근거: Java `StudyMember` 엔티티 클래스에서 `leftReason` 필드가 `String`(`VARCHAR(20)`)으로 매핑되어 있으나, MySQL 데이터베이스에는 `ENUM` 타입으로 선언되어 있어 Hibernate `ddl-auto: validate` 유효성 검증 시 타입 불일치 에러(`wrong column type encountered`)가 발생함. 이를 일치시키기 위해 데이터베이스 컬럼 타입을 `VARCHAR(20)`로 맞춘다.
+- 후속: `studymate_schema.sql` 수정 완료.
 
 ---
 
