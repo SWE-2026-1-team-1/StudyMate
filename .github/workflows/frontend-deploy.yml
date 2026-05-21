@@ -78,7 +78,7 @@ jobs:
       - name: 헬스체크 (SPA)
         run: |
           for i in {1..12}; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' http://${{ secrets.EC2_HOST }}/)
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://studymate.marcuth.store/)
             if [ "$code" = "200" ]; then
               echo "SPA 200 OK"
               exit 0

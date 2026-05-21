@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://13.125.11.104:8080",
+        target: "https://studymate.marcuth.store",
         changeOrigin: true,
       },
     },

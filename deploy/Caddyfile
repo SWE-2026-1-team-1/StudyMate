@@ -1,9 +1,4 @@
-{
-	# 도메인 없음 → ACME 비활성화. HTTP only.
-	auto_https off
-}
-
-:80 {
+studymate.marcuth.store {
 	encode gzip zstd
 
 	# 백엔드 API: /api/* 는 prefix 유지한 채 스프링으로 전달
