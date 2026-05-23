@@ -86,18 +86,58 @@ export function TeamBoard() {
 }
 
 export function TeamAttendance() {
+  const [rows, setRows] = useState(attendanceMembers);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const latestDateIndex = attendanceDates.length - 1;
+
+  const toggleAttendance = (memberIndex: number, checkIndex: number) => {
+    if (checkIndex !== latestDateIndex) return;
+
+    setRows((current) => current.map((member, index) => {
+      if (index !== memberIndex) return member;
+
+      const checks = member.checks.map((state, stateIndex) => {
+        if (stateIndex !== checkIndex) return state;
+        if (state === "scheduled") return "present";
+        if (state === "present") return "absent";
+        return "scheduled";
+      });
+
+      return { ...member, checks };
+    }));
+  };
+
+  const handleSaveAttendance = () => {
+    setShowSavedToast(true);
+    window.setTimeout(() => setShowSavedToast(false), 2200);
+  };
+
   return (
     <>
-      <TeamHeader title="Attendance Board" subtitle="팀원 출석체크를 관리하세요." />
+      {showSavedToast && <div className="attendance-toast" role="status">출석정보 저장되었습니다.</div>}
+      <TeamHeader
+        title="Attendance Board"
+        subtitle="팀원 출석체크를 관리하세요."
+        action={<button className="attendance-confirm" type="button" aria-label="출석 저장" onClick={handleSaveAttendance} />}
+      />
       <section className="attendance-card">
         <div className="attendance-row head">
           <strong>Member Name</strong>
           {attendanceDates.map((date) => <strong key={date}>{date}</strong>)}
         </div>
-        {attendanceMembers.map(({ name, avatar, checks }) => (
+        {rows.map(({ name, avatar, checks }, memberIndex) => (
           <div className="attendance-row" key={name}>
             <span>{avatar ? <Avatar name={avatar} /> : <i className="initial-avatar">{name.slice(0, 2)}</i>}{name}</span>
-            {checks.map((state, index) => <b className={state} key={`${name}-${index}`} />)}
+            {checks.map((state, index) => (
+              <button
+                className={`attendance-state ${state}`}
+                type="button"
+                aria-label={`${name} ${attendanceDates[index]} 출석 상태 ${state}`}
+                disabled={index !== latestDateIndex}
+                key={`${name}-${index}`}
+                onClick={() => toggleAttendance(memberIndex, index)}
+              />
+            ))}
           </div>
         ))}
         <footer><span className="present">Present</span><span className="absent">Absent</span><span className="scheduled">Scheduled</span></footer>

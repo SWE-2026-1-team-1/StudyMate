@@ -159,7 +159,7 @@ export const teamPosts: TeamPost[] = [
   },
 ];
 
-export const attendanceDates = ["10/01", "10/03", "10/05", "10/08", "10/10", "10/12", "10/15", "10/17", "10/19 (Next)"];
+export const attendanceDates = ["10/01", "10/03", "10/05", "10/08", "10/10", "10/12", "10/15", "10/17", "10/19"];
 
 export const attendanceMembers: AttendanceMember[] = [
   { name: "김지수", avatar: "user", checks: ["present", "present", "absent", "present", "present", "present", "present", "present", "scheduled"] },
