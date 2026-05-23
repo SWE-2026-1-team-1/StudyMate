@@ -106,9 +106,36 @@ export const createStudy = {
 };
 
 export const teamPosts: TeamPost[] = [
-  { tag: "RESEARCH", title: "중간 발표 자료 준비 및 데이터 분석 공유", author: "김지수", avatar: "c" },
-  { tag: "ENGINEERING", title: "알고리즘 구현 중 엣지 케이스 처리 질문", author: "박민호", avatar: "a" },
-  { tag: "ENGINEERING", title: "알고리즘 구현 중 엣지 케이스 처리 질문", author: "박민호", avatar: "a" },
+  {
+    tag: "RESEARCH",
+    title: "중간 발표 자료 준비 및 데이터 분석 공유",
+    excerpt: "지난주에 수집한 데이터 전처리가 완료되었습니다. 시각화 자료를 확인하시고 추가하고 싶은 차트가 있다면 댓글로 알려주세요.",
+    time: "2h ago",
+    comments: 12,
+    likes: 5,
+    author: "김지수",
+    avatar: "c",
+  },
+  {
+    tag: "ENGINEERING",
+    title: "알고리즘 구현 중 엣지 케이스 처리 질문",
+    excerpt: "BFS 구현 중에 순환 구조가 있는 그래프에서 무한 루프가 발생하는데, 방문 처리를 리스트 대신 셋으로 하는 게 더 효율적일까요?",
+    time: "5h ago",
+    comments: 8,
+    likes: 3,
+    author: "박민호",
+    avatar: "a",
+  },
+  {
+    tag: "ENGINEERING",
+    title: "알고리즘 구현 중 엣지 케이스 처리 질문",
+    excerpt: "BFS 구현 중에 순환 구조가 있는 그래프에서 무한 루프가 발생하는데, 방문 처리를 리스트 대신 셋으로 하는 게 더 효율적일까요?",
+    time: "5h ago",
+    comments: 8,
+    likes: 3,
+    author: "박민호",
+    avatar: "a",
+  },
 ];
 
 export const attendanceDates = ["10/01", "10/03", "10/05", "10/08", "10/10", "10/12", "10/15", "10/17", "10/19 (Next)"];

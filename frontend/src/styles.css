@@ -2230,7 +2230,7 @@ input:disabled {
 .team-content {
   position: relative;
   width: min(
-    calc(1180px * var(--ui-scale)),
+    calc(1290px * var(--ui-scale)),
     calc(100% - calc(96px * var(--ui-scale)))
   );
   margin: 0 auto;
@@ -2240,7 +2240,7 @@ input:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: calc(66px * var(--ui-scale));
+  margin-bottom: calc(112px * var(--ui-scale));
 }
 .team-header h1 {
   margin: 0;
@@ -2275,20 +2275,53 @@ input:disabled {
   border-radius: 50%;
   background: #20c878;
 }
+.study-info-button {
+  min-width: calc(166px * var(--ui-scale));
+  height: calc(62px * var(--ui-scale));
+  border: 0;
+  border-radius: calc(20px * var(--ui-scale));
+  padding: 0 calc(22px * var(--ui-scale));
+  background: var(--purple-2);
+  color: #fff;
+  font-size: calc(18px * var(--ui-scale));
+  font-weight: 700;
+  box-shadow: none;
+}
 .topic-start {
   position: absolute;
-  top: calc(188px * var(--ui-scale));
+  top: calc(216px * var(--ui-scale));
   right: 0;
-  background: #eaedff;
-  color: var(--purple);
-  font-size: calc(21px * var(--ui-scale));
+  display: grid;
+  width: calc(50px * var(--ui-scale));
+  height: calc(50px * var(--ui-scale));
+  min-width: 0;
+  place-items: center;
+  border-radius: calc(16px * var(--ui-scale));
+  padding: 0;
+  background: var(--purple-2);
+  color: #fff;
+}
+.topic-start span {
+  width: calc(20px * var(--ui-scale));
+  height: calc(20px * var(--ui-scale));
+  background: currentColor;
+  mask-image: url("./assets/plus.svg");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-image: url("./assets/plus.svg");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 .post-list {
   gap: calc(42px * var(--ui-scale));
 }
 .post-card {
+  min-height: calc(276px * var(--ui-scale));
   padding: calc(40px * var(--ui-scale));
   border: calc(1px * var(--ui-scale)) solid #dfe5ec;
+  border-radius: calc(30px * var(--ui-scale));
   box-shadow: none;
 }
 .post-card header,
@@ -2302,7 +2335,7 @@ input:disabled {
   align-items: center;
   gap: calc(18px * var(--ui-scale));
 }
-.post-card span {
+.post-tag {
   border-radius: calc(7px * var(--ui-scale));
   padding: calc(7px * var(--ui-scale)) calc(13px * var(--ui-scale));
   background: #ffe4f1;
@@ -2311,11 +2344,15 @@ input:disabled {
   font-weight: 700;
   letter-spacing: calc(1px * var(--ui-scale));
 }
+.post-tag-engineering {
+  background: #eceeff;
+  color: var(--purple-2);
+}
 .post-card h2 {
   margin: 0;
   font-family: inherit;
   font-size: calc(27px * var(--ui-scale));
-  font-weight: 500;
+  font-weight: 700;
 }
 .post-card time {
   border-radius: calc(9px * var(--ui-scale));
@@ -2325,7 +2362,7 @@ input:disabled {
   font-weight: 700;
 }
 .post-card p {
-  margin: calc(36px * var(--ui-scale)) 0;
+  margin: calc(36px * var(--ui-scale)) 0 calc(34px * var(--ui-scale));
   color: #4b5563;
   font-size: calc(19px * var(--ui-scale));
   font-weight: 700;
@@ -2340,9 +2377,11 @@ input:disabled {
   margin-left: auto;
   margin-right: calc(14px * var(--ui-scale));
   color: #111827;
+  font-size: calc(17px * var(--ui-scale));
 }
 .post-card footer b {
   margin-right: calc(28px * var(--ui-scale));
+  font-size: calc(17px * var(--ui-scale));
 }
 .attendance-card {
   overflow: hidden;

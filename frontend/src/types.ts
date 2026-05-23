@@ -86,6 +86,10 @@ export type JoinRequest = {
 export type TeamPost = {
   tag: string;
   title: string;
+  excerpt: string;
+  time: string;
+  comments: number;
+  likes: number;
   author: string;
   avatar: string;
 };

@@ -1,11 +1,16 @@
+import type { ReactNode } from "react";
 import { attendanceDates, attendanceMembers, joinRequests, teamMembers, teamPosts } from "../data";
 import { Avatar } from "../components/Common";
 
 export function TeamBoard() {
   return (
     <>
-      <TeamHeader title="Team Board" subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요." />
-      <button className="topic-start" type="button">+ Start Topic</button>
+      <TeamHeader
+        title="Team Board"
+        subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요."
+        action={<button className="study-info-button" type="button">스터디 정보 보기</button>}
+      />
+      <button className="topic-start" type="button" aria-label="게시글 작성"><span aria-hidden="true" /></button>
       <section className="post-list">
         {teamPosts.map((post, index) => <Post key={`${post.title}-${index}`} {...post} />)}
       </section>
@@ -69,16 +74,49 @@ export function TeamMembers() {
   );
 }
 
-function TeamHeader({ title, subtitle, hideCount = false }: { title: string; subtitle: string; hideCount?: boolean }) {
-  return <header className="team-header"><div><h1>{title}</h1><p>{subtitle}</p></div>{!hideCount && <span className="active-count"><i />7 Active</span>}</header>;
+function TeamHeader({
+  title,
+  subtitle,
+  hideCount = false,
+  action,
+}: {
+  title: string;
+  subtitle: string;
+  hideCount?: boolean;
+  action?: ReactNode;
+}) {
+  return (
+    <header className="team-header">
+      <div><h1>{title}</h1><p>{subtitle}</p></div>
+      {action ?? (!hideCount && <span className="active-count"><i />7 Active</span>)}
+    </header>
+  );
 }
 
-function Post({ tag, title, author, avatar }: { tag: string; title: string; author: string; avatar: string }) {
+function Post({
+  tag,
+  title,
+  excerpt,
+  time,
+  comments,
+  likes,
+  author,
+  avatar,
+}: {
+  tag: string;
+  title: string;
+  excerpt: string;
+  time: string;
+  comments: number;
+  likes: number;
+  author: string;
+  avatar: string;
+}) {
   return (
     <article className="post-card">
-      <header><div><span>{tag}</span><h2>{title}</h2></div><time>2h ago</time></header>
-      <p>지난주에 수집한 데이터 전처리가 완료되었습니다. 시각화 자료를 확인하시고 추가하고 싶은 차트가 있다면 댓글로 알려주세요.</p>
-      <footer><b>▱ 12</b><b>♡ 5</b><strong>{author}</strong><Avatar name={avatar} /></footer>
+      <header><div><span className={`post-tag post-tag-${tag.toLowerCase()}`}>{tag}</span><h2>{title}</h2></div><time>{time}</time></header>
+      <p>{excerpt}</p>
+      <footer><b>▱ {comments}</b><b>♡ {likes}</b><strong>{author}</strong><Avatar name={avatar} /></footer>
     </article>
   );
 }
