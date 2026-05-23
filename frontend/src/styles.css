@@ -2324,13 +2324,13 @@ input:disabled {
   border-radius: calc(30px * var(--ui-scale));
   box-shadow: none;
 }
-.post-card header,
-.post-card footer {
+.post-card > header,
+.post-card > footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.post-card header div {
+.post-card > header div {
   display: flex;
   align-items: center;
   gap: calc(18px * var(--ui-scale));
@@ -2354,13 +2354,6 @@ input:disabled {
   font-size: calc(27px * var(--ui-scale));
   font-weight: 700;
 }
-.post-card time {
-  border-radius: calc(9px * var(--ui-scale));
-  padding: calc(7px * var(--ui-scale)) calc(12px * var(--ui-scale));
-  background: #f1f3f5;
-  color: #8d96a2;
-  font-weight: 700;
-}
 .post-card p {
   margin: calc(36px * var(--ui-scale)) 0 calc(34px * var(--ui-scale));
   color: #4b5563;
@@ -2368,20 +2361,121 @@ input:disabled {
   font-weight: 700;
   line-height: 1.6;
 }
-.post-card footer {
+.post-card > footer {
   padding-top: calc(24px * var(--ui-scale));
   border-top: calc(1px * var(--ui-scale)) solid #dfe5ec;
   color: #617086;
 }
-.post-card footer strong {
+.post-card > footer strong {
   margin-left: auto;
   margin-right: calc(14px * var(--ui-scale));
   color: #111827;
   font-size: calc(17px * var(--ui-scale));
 }
-.post-card footer b {
-  margin-right: calc(28px * var(--ui-scale));
+.comment-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(8px * var(--ui-scale));
+  border: 0;
+  background: transparent;
+  color: #617086;
   font-size: calc(17px * var(--ui-scale));
+  font-weight: 700;
+}
+.comment-toggle span {
+  width: calc(18px * var(--ui-scale));
+  height: calc(18px * var(--ui-scale));
+  background: currentColor;
+  mask-image: url("./assets/comment.svg");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-image: url("./assets/comment.svg");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+.comment-panel {
+  display: grid;
+  gap: calc(30px * var(--ui-scale));
+  margin: calc(8px * var(--ui-scale)) 0 0;
+  padding: calc(34px * var(--ui-scale)) 0 0;
+  border-top: calc(1px * var(--ui-scale)) solid #dfe5ec;
+}
+.comment-item {
+  display: grid;
+  grid-template-columns: calc(42px * var(--ui-scale)) 1fr;
+  gap: calc(20px * var(--ui-scale));
+  align-items: start;
+}
+.comment-item header {
+  display: flex;
+  align-items: center;
+  gap: calc(10px * var(--ui-scale));
+  margin-bottom: calc(8px * var(--ui-scale));
+}
+.comment-item strong {
+  color: #111827;
+  font-size: calc(17px * var(--ui-scale));
+}
+.comment-item time {
+  color: #8d96a2;
+  font-size: calc(14px * var(--ui-scale));
+  font-weight: 700;
+}
+.comment-item p {
+  margin: 0;
+  color: #4b5563;
+  font-size: calc(17px * var(--ui-scale));
+  font-weight: 500;
+  line-height: 1.55;
+}
+.comment-form {
+  display: grid;
+  grid-template-columns: 1fr calc(46px * var(--ui-scale));
+  align-items: center;
+  gap: calc(14px * var(--ui-scale));
+  min-height: calc(78px * var(--ui-scale));
+  border: calc(1px * var(--ui-scale)) solid #e5e9f0;
+  border-radius: calc(22px * var(--ui-scale));
+  padding: 0 calc(12px * var(--ui-scale)) 0 calc(40px * var(--ui-scale));
+  background: #f8f9fc;
+}
+.comment-form input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #111827;
+  font-size: calc(18px * var(--ui-scale));
+  font-weight: 500;
+  outline: none;
+}
+.comment-form input::placeholder {
+  color: #9aa5b5;
+}
+.comment-form button {
+  position: relative;
+  display: grid;
+  width: calc(46px * var(--ui-scale));
+  height: calc(46px * var(--ui-scale));
+  place-items: center;
+  border: 0;
+  border-radius: calc(16px * var(--ui-scale));
+  background: var(--purple-2);
+}
+.comment-form button::before {
+  content: "";
+  width: calc(18px * var(--ui-scale));
+  height: calc(18px * var(--ui-scale));
+  background: #fff;
+  mask-image: url("./assets/send.svg");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-image: url("./assets/send.svg");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 .attendance-card {
   overflow: hidden;

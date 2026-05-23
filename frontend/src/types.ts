@@ -87,9 +87,12 @@ export type TeamPost = {
   tag: string;
   title: string;
   excerpt: string;
-  time: string;
-  comments: number;
-  likes: number;
+  replies: {
+    author: string;
+    avatar: string;
+    time: string;
+    body: string;
+  }[];
   author: string;
   avatar: string;
 };

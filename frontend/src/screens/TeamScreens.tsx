@@ -1,8 +1,11 @@
-import type { ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { attendanceDates, attendanceMembers, joinRequests, teamMembers, teamPosts } from "../data";
 import { Avatar } from "../components/Common";
+import type { TeamPost } from "../types";
 
 export function TeamBoard() {
+  const [openPost, setOpenPost] = useState<number | null>(null);
+
   return (
     <>
       <TeamHeader
@@ -12,7 +15,14 @@ export function TeamBoard() {
       />
       <button className="topic-start" type="button" aria-label="게시글 작성"><span aria-hidden="true" /></button>
       <section className="post-list">
-        {teamPosts.map((post, index) => <Post key={`${post.title}-${index}`} {...post} />)}
+        {teamPosts.map((post, index) => (
+          <Post
+            key={`${post.title}-${index}`}
+            post={post}
+            isOpen={openPost === index}
+            onToggle={() => setOpenPost(openPost === index ? null : index)}
+          />
+        ))}
       </section>
     </>
   );
@@ -93,30 +103,56 @@ function TeamHeader({
   );
 }
 
-function Post({
-  tag,
-  title,
-  excerpt,
-  time,
-  comments,
-  likes,
-  author,
-  avatar,
-}: {
-  tag: string;
-  title: string;
-  excerpt: string;
-  time: string;
-  comments: number;
-  likes: number;
-  author: string;
-  avatar: string;
-}) {
+function Post({ post, isOpen, onToggle }: { post: TeamPost; isOpen: boolean; onToggle: () => void }) {
+  const { tag, title, excerpt, replies, author, avatar } = post;
+  const [draft, setDraft] = useState("");
+  const [localReplies, setLocalReplies] = useState<TeamPost["replies"]>([]);
+  const displayedReplies = [...replies, ...localReplies];
+
+  const handleCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body = draft.trim();
+    if (!body) return;
+
+    setLocalReplies((current) => [...current, { author: "나", avatar: "user", time: "now", body }]);
+    setDraft("");
+  };
+
   return (
-    <article className="post-card">
-      <header><div><span className={`post-tag post-tag-${tag.toLowerCase()}`}>{tag}</span><h2>{title}</h2></div><time>{time}</time></header>
+    <article className={`post-card${isOpen ? " is-open" : ""}`}>
+      <header><div><span className={`post-tag post-tag-${tag.toLowerCase()}`}>{tag}</span><h2>{title}</h2></div></header>
       <p>{excerpt}</p>
-      <footer><b>▱ {comments}</b><b>♡ {likes}</b><strong>{author}</strong><Avatar name={avatar} /></footer>
+      {isOpen && (
+        <section className="comment-panel" aria-label="댓글">
+          {displayedReplies.map((reply, index) => (
+            <article className="comment-item" key={`${reply.author}-${index}`}>
+              <Avatar name={reply.avatar} />
+              <div>
+                <header><strong>{reply.author}</strong><time>{reply.time}</time></header>
+                <p>{reply.body}</p>
+              </div>
+            </article>
+          ))}
+          <form className="comment-form" onSubmit={handleCommentSubmit}>
+            <input
+              type="text"
+              placeholder="Write a comment..."
+              aria-label="댓글 입력"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            <button type="submit" aria-label="댓글 전송" />
+          </form>
+        </section>
+      )}
+      <footer>
+        <button className="comment-toggle" type="button" onClick={onToggle} aria-expanded={isOpen}>
+          <span aria-hidden="true" />
+          {displayedReplies.length}
+        </button>
+        <strong>{author}</strong>
+        <Avatar name={avatar} />
+      </footer>
     </article>
   );
 }
