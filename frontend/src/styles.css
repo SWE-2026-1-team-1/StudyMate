@@ -2183,6 +2183,31 @@ input:disabled {
   text-align: left;
   text-decoration: none;
 }
+.team-nav-icon {
+  display: inline-block;
+  flex: 0 0 calc(22px * var(--ui-scale));
+  width: calc(22px * var(--ui-scale));
+  height: calc(22px * var(--ui-scale));
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+.team-nav-icon-board {
+  mask-image: url("./assets/board.svg");
+  -webkit-mask-image: url("./assets/board.svg");
+}
+.team-nav-icon-attendance {
+  mask-image: url("./assets/attendance.svg");
+  -webkit-mask-image: url("./assets/attendance.svg");
+}
+.team-nav-icon-member {
+  mask-image: url("./assets/member.svg");
+  -webkit-mask-image: url("./assets/member.svg");
+}
 .team-nav .active {
   border-left: calc(5px * var(--ui-scale)) solid var(--purple-2);
   background: #e9edff;
