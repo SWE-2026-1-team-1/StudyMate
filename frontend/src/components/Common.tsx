@@ -183,6 +183,12 @@ import person1 from "../assets/person1.svg";
 import person2 from "../assets/person2.svg";
 import person3 from "../assets/person3.svg";
 
+const portraitIcons: Record<string, string> = {
+  a: person1,
+  b: person2,
+  c: person3,
+};
+
 export function AvatarStack() {
   return (
     <span className="avatar-stack">
@@ -196,6 +202,10 @@ export function AvatarStack() {
 export function Avatar({ name, className = "" }: { name: string; className?: string }) {
   if (name === "user") {
     return <img src={userProfileIcon} alt="" className={`avatar user-profile-icon ${className}`} aria-hidden="true" />;
+  }
+
+  if (portraitIcons[name]) {
+    return <img src={portraitIcons[name]} alt="" className={`avatar ${className}`} aria-hidden="true" />;
   }
 
   const initial = name === "user" ? "U" : name.slice(0, 1).toUpperCase();

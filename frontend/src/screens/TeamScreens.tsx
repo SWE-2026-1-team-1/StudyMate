@@ -5,6 +5,34 @@ import type { TeamPost } from "../types";
 
 export function TeamBoard() {
   const [openPost, setOpenPost] = useState<number | null>(null);
+  const [isComposing, setIsComposing] = useState(false);
+  const [postTitle, setPostTitle] = useState("");
+  const [postBody, setPostBody] = useState("");
+  const [localPosts, setLocalPosts] = useState<TeamPost[]>([]);
+  const visiblePosts = [...localPosts, ...teamPosts];
+
+  const handlePostSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = postTitle.trim();
+    const excerpt = postBody.trim();
+    if (!title || !excerpt) return;
+
+    setLocalPosts((current) => [
+      {
+        tag: "NOTICE",
+        title,
+        excerpt,
+        replies: [],
+        author: "나",
+        avatar: "user",
+      },
+      ...current,
+    ]);
+    setPostTitle("");
+    setPostBody("");
+    setIsComposing(false);
+    setOpenPost(null);
+  };
 
   return (
     <>
@@ -13,11 +41,40 @@ export function TeamBoard() {
         subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요."
         action={<button className="study-info-button" type="button">스터디 정보 보기</button>}
       />
-      <button className="topic-start" type="button" aria-label="게시글 작성"><span aria-hidden="true" /></button>
+      <button
+        className="topic-start"
+        type="button"
+        aria-label="게시글 작성"
+        aria-expanded={isComposing}
+        onClick={() => setIsComposing((current) => !current)}
+      >
+        <span aria-hidden="true" />
+      </button>
+      {isComposing && (
+        <form className="post-compose" onSubmit={handlePostSubmit}>
+          <Avatar name="user" />
+          <div className="post-compose-fields">
+            <input
+              type="text"
+              placeholder="제목을 입력하세요"
+              aria-label="게시글 제목"
+              value={postTitle}
+              onChange={(event) => setPostTitle(event.target.value)}
+            />
+            <textarea
+              placeholder="새로운 소식을 공유해보세요..."
+              aria-label="게시글 내용"
+              value={postBody}
+              onChange={(event) => setPostBody(event.target.value)}
+            />
+          </div>
+          <button className="post-submit" type="submit">Post</button>
+        </form>
+      )}
       <section className="post-list">
-        {teamPosts.map((post, index) => (
+        {visiblePosts.map((post, index) => (
           <Post
-            key={`${post.title}-${index}`}
+            key={`${post.author}-${post.title}-${index}`}
             post={post}
             isOpen={openPost === index}
             onToggle={() => setOpenPost(openPost === index ? null : index)}
