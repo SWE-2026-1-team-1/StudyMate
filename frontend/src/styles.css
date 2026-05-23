@@ -2159,6 +2159,20 @@ input:disabled {
   box-shadow: 0 calc(12px * var(--ui-scale)) calc(22px * var(--ui-scale))
     rgba(85, 72, 237, 0.22);
 }
+.team-logo-icon::before {
+  content: "";
+  width: calc(28px * var(--ui-scale));
+  height: calc(28px * var(--ui-scale));
+  background: #fff;
+  mask-image: url("./assets/team.svg");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-image: url("./assets/team.svg");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
 .team-logo b {
   font-size: calc(21px * var(--ui-scale));
 }

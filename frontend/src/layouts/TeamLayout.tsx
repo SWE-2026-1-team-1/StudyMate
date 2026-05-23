@@ -10,7 +10,7 @@ export function TeamLayout() {
       <TopBar />
       <div className="team-shell">
         <aside className="team-nav">
-          <div className="team-logo"><span>✣</span><b>파이썬 스터디</b><small>CS302 PROJECT</small></div>
+          <div className="team-logo"><span className="team-logo-icon" aria-hidden="true" /><b>파이썬 스터디</b><small>CS302 PROJECT</small></div>
           <NavLink to={ROUTE_PATHS.teamBoard(teamId)}>
             <span className="team-nav-icon team-nav-icon-board" aria-hidden="true" />
             게시판
