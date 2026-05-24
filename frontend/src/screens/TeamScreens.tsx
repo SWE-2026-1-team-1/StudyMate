@@ -148,8 +148,13 @@ export function TeamAttendance() {
 
 export function TeamMembers() {
   return (
-    <>
-      <TeamHeader title="Member Board" subtitle="스터디 팀원을 관리하세요." hideCount />
+    <div className="members-page">
+      <TeamHeader
+        title="Member Board"
+        subtitle="스터디 팀원을 관리하세요."
+        hideCount
+        action={<button className="study-delete-button" type="button">스터디 삭제</button>}
+      />
       <section className="member-table">
         <header><h2>Active Members</h2><span>Total: 3</span></header>
         <div className="member-row head">
@@ -161,9 +166,9 @@ export function TeamMembers() {
         {teamMembers.map(({ name, role, rate, avatar }) => (
           <div className="member-row" key={name}>
             <span><Avatar name={avatar} />{name}</span>
-            <span><em>{role}</em></span>
+            <span><em className={`role-${role.toLowerCase()}`}>{role}</em></span>
             <span className="rate"><i><b style={{ width: rate }} /></i>{rate}</span>
-            <button type="button">⋮</button>
+            {role === "LEADER" ? <span aria-hidden="true" /> : <button type="button">kick</button>}
           </div>
         ))}
       </section>
@@ -177,7 +182,7 @@ export function TeamMembers() {
         ))}
         <button className="invite-link" type="button">초대 링크</button>
       </section>
-    </>
+    </div>
   );
 }
 

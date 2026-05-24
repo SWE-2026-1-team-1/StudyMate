@@ -299,6 +299,9 @@ button {
   letter-spacing: 0;
   object-fit: cover;
 }
+.avatar-borderless {
+  clip-path: circle(45% at 50% 50%);
+}
 .portrait-b {
   background: #b7dce3;
   color: #29535c;
@@ -2332,7 +2335,7 @@ input:disabled {
   border: 0;
   border-radius: calc(20px * var(--ui-scale));
   padding: 0 calc(22px * var(--ui-scale));
-  background: var(--purple-2);
+  background: #4f46e5;
   color: #fff;
   font-size: calc(18px * var(--ui-scale));
   font-weight: 700;
@@ -2349,7 +2352,7 @@ input:disabled {
   place-items: center;
   border-radius: calc(16px * var(--ui-scale));
   padding: 0;
-  background: var(--purple-2);
+  background: #4f46e5;
   color: #fff;
 }
 .topic-start span {
@@ -2711,6 +2714,22 @@ input:disabled {
   border-radius: calc(52px * var(--ui-scale));
   box-shadow: none;
 }
+.members-page {
+  width: 100%;
+}
+.members-page .team-header {
+  margin-bottom: calc(66px * var(--ui-scale));
+}
+.study-delete-button {
+  min-width: calc(150px * var(--ui-scale));
+  height: calc(62px * var(--ui-scale));
+  border: calc(1px * var(--ui-scale)) solid #dfe5ec;
+  border-radius: calc(24px * var(--ui-scale));
+  background: #fff;
+  color: #ff4b5c;
+  font-size: calc(17px * var(--ui-scale));
+  font-weight: 500;
+}
 .member-table header {
   display: flex;
   align-items: center;
@@ -2721,17 +2740,19 @@ input:disabled {
 .member-table h2 {
   margin: 0;
   font-size: calc(22px * var(--ui-scale));
+  font-weight: 700;
 }
 .member-table header span {
   border-radius: calc(999px * var(--ui-scale));
   padding: calc(8px * var(--ui-scale)) calc(18px * var(--ui-scale));
   background: #eef1f4;
   color: #555b64;
+  font-size: calc(14px * var(--ui-scale));
   font-weight: 700;
 }
 .member-row {
   display: grid;
-  grid-template-columns: 1.1fr 0.8fr 1fr calc(50px * var(--ui-scale));
+  grid-template-columns: 1.1fr 0.8fr 1fr calc(150px * var(--ui-scale));
   align-items: center;
   min-height: calc(82px * var(--ui-scale));
   border-bottom: calc(1px * var(--ui-scale)) solid #dfe5ec;
@@ -2744,6 +2765,7 @@ input:disabled {
   color: #555b64;
   font-size: calc(14px * var(--ui-scale));
   font-weight: 700;
+  letter-spacing: calc(0.3px * var(--ui-scale));
 }
 .member-row span:first-child {
   display: flex;
@@ -2751,18 +2773,32 @@ input:disabled {
   gap: calc(20px * var(--ui-scale));
   font-size: calc(18px * var(--ui-scale));
 }
+.member-row .avatar {
+  width: calc(42px * var(--ui-scale));
+  height: calc(42px * var(--ui-scale));
+}
 .member-row em {
   border-radius: calc(999px * var(--ui-scale));
   padding: calc(6px * var(--ui-scale)) calc(14px * var(--ui-scale));
   background: #e8e7ff;
   color: #3331d1;
+  font-size: calc(12px * var(--ui-scale));
   font-style: normal;
   font-weight: 700;
+}
+.member-row em.role-researcher {
+  background: #e8eef6;
+  color: #566277;
+}
+.member-row em.role-designer {
+  background: #ffe1f0;
+  color: #d94a95;
 }
 .rate {
   display: flex;
   align-items: center;
   gap: calc(14px * var(--ui-scale));
+  font-size: calc(16px * var(--ui-scale));
   font-weight: 700;
 }
 .rate i {
@@ -2779,10 +2815,15 @@ input:disabled {
   background: #13b981;
 }
 .member-row button {
+  justify-self: center;
+  min-width: calc(90px * var(--ui-scale));
   border: 0;
-  background: transparent;
+  border-radius: calc(999px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale));
+  background: #e3e7ea;
   color: #555b64;
-  font-size: calc(24px * var(--ui-scale));
+  font-size: calc(14px * var(--ui-scale));
+  font-weight: 700;
 }
 .request-table {
   margin-top: calc(42px * var(--ui-scale));
@@ -2804,6 +2845,11 @@ input:disabled {
 }
 .request-row .avatar {
   grid-row: span 2;
+  width: calc(52px * var(--ui-scale));
+  height: calc(52px * var(--ui-scale));
+}
+.request-row b {
+  font-size: calc(17px * var(--ui-scale));
 }
 .request-row small {
   color: #555b64;
@@ -2819,6 +2865,7 @@ input:disabled {
   padding: calc(12px * var(--ui-scale)) calc(24px * var(--ui-scale));
   background: #d9dde2;
   color: #333;
+  font-size: calc(14px * var(--ui-scale));
   font-weight: 700;
 }
 .request-row .primary {
@@ -2828,12 +2875,13 @@ input:disabled {
 }
 .invite-link {
   display: block;
-  width: calc(120px * var(--ui-scale));
-  margin: calc(16px * var(--ui-scale)) auto;
+  width: max-content;
+  margin: calc(20px * var(--ui-scale)) auto calc(18px * var(--ui-scale));
   border: 0;
-  border-radius: calc(999px * var(--ui-scale));
-  background: #dedcff;
+  padding: 0;
+  background: transparent;
   color: var(--purple);
+  font-size: calc(13px * var(--ui-scale));
   font-weight: 700;
 }
 

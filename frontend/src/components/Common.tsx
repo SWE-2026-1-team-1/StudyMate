@@ -200,12 +200,16 @@ export function AvatarStack() {
 }
 
 export function Avatar({ name, className = "" }: { name: string; className?: string }) {
+  const { pathname } = useLocation();
+  const isAuthPath = pathname === ROUTE_PATHS.login || pathname === ROUTE_PATHS.signup;
+  const borderClass = isAuthPath ? "" : "avatar-borderless";
+
   if (name === "user") {
     return <img src={userProfileIcon} alt="" className={`avatar user-profile-icon ${className}`} aria-hidden="true" />;
   }
 
   if (portraitIcons[name]) {
-    return <img src={portraitIcons[name]} alt="" className={`avatar ${className}`} aria-hidden="true" />;
+    return <img src={portraitIcons[name]} alt="" className={`avatar ${borderClass} ${className}`} aria-hidden="true" />;
   }
 
   const initial = name === "user" ? "U" : name.slice(0, 1).toUpperCase();
