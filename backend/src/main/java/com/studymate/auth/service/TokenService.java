@@ -68,7 +68,7 @@ public class TokenService {
         }
 
         // access token 에 email 필요 → user 조회
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndIsDeletedFalse(userId)
                 .orElseThrow(() -> new AuthException(ErrorCode.INVALID_TOKEN));
 
         return issueTokenPair(userId, user.getEmail());
