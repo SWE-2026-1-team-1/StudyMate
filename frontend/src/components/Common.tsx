@@ -1,7 +1,7 @@
 import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
 import { useState, type ChangeEvent, type ReactNode } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getTopLevelRoute, ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
 import userProfileIcon from "../assets/user_profile.svg";
@@ -38,11 +38,21 @@ export function Frame({ children }: { children: ReactNode }) {
 }
 
 export function TopBar() {
+  const navigate = useNavigate();
   const { pathname } = useLocation();
   const activeNav: TopLevelNav = getTopLevelRoute(pathname);
   const activeIndex = activeNav === "main" ? 0 : activeNav === "explore" ? 1 : activeNav === "create" ? 2 : 3;
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("userId");
+    setShowProfileMenu(false);
+    navigate(ROUTE_PATHS.login, { replace: true });
+  };
 
   return (
     <header className="topbar">
@@ -61,7 +71,10 @@ export function TopBar() {
           <button 
             className="language-pill" 
             type="button" 
-            onClick={() => setShowLangMenu(!showLangMenu)}
+            onClick={() => {
+              setShowLangMenu(!showLangMenu);
+              setShowProfileMenu(false);
+            }}
           >
             <img src={globeIcon} alt="Globe Icon" className="globe-icon" />
             {lang.code} <i className="arrow-down" />
@@ -85,9 +98,26 @@ export function TopBar() {
             </div>
           )}
         </div>
-        <NavLink className="avatar-button" aria-label="마이페이지로 이동" to={ROUTE_PATHS.mypage}>
-          <Avatar className="mini-avatar" name="user" />
-        </NavLink>
+        <div className="profile-menu">
+          <button
+            className="avatar-button"
+            type="button"
+            aria-label="프로필 메뉴 열기"
+            aria-expanded={showProfileMenu}
+            onClick={() => {
+              setShowProfileMenu(!showProfileMenu);
+              setShowLangMenu(false);
+            }}
+          >
+            <Avatar className="mini-avatar" name="user" />
+          </button>
+          {showProfileMenu && (
+            <div className="profile-dropdown">
+              <NavLink to={ROUTE_PATHS.mypage} onClick={() => setShowProfileMenu(false)}>마이페이지</NavLink>
+              <button className="logout-menu-item" type="button" onClick={handleLogout}>로그아웃</button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

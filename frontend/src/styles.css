@@ -245,6 +245,9 @@ button {
   justify-self: end;
   gap: calc(24px * var(--ui-scale));
 }
+.profile-menu {
+  position: relative;
+}
 .avatar-button {
   display: grid;
   width: calc(36px * var(--ui-scale));
@@ -255,6 +258,7 @@ button {
   padding: 0;
   background: transparent;
   text-decoration: none;
+  cursor: pointer;
 }
 .user-profile-icon {
   display: block;
@@ -579,6 +583,51 @@ button {
   background: #f8fafc;
   color: var(--purple);
   font-weight: 700;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: calc(10px * var(--ui-scale));
+  min-width: calc(132px * var(--ui-scale));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: calc(1px * var(--ui-scale)) solid #e2e8f0;
+  border-radius: calc(12px * var(--ui-scale));
+  background: #fff;
+  box-shadow: 0 calc(10px * var(--ui-scale)) calc(25px * var(--ui-scale)) rgba(15, 23, 42, 0.1);
+  z-index: 100;
+}
+
+.profile-dropdown a,
+.profile-dropdown button {
+  border: 0;
+  padding: calc(11px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-size: calc(14px * var(--ui-scale));
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.profile-dropdown a:hover,
+.profile-dropdown button:hover {
+  background: #f8fafc;
+}
+
+.profile-dropdown .logout-menu-item {
+  color: #dc2626;
+}
+
+.profile-dropdown .logout-menu-item:hover {
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .auth-content {
