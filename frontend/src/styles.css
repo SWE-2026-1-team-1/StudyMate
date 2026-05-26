@@ -1094,6 +1094,12 @@ input:disabled {
   font-size: calc(17px * var(--ui-scale));
   font-weight: 700;
 }
+.section-note {
+  margin: 0 0 calc(18px * var(--ui-scale));
+  color: #617086;
+  font-size: calc(15px * var(--ui-scale));
+  font-weight: 600;
+}
 .study-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

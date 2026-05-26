@@ -13,6 +13,7 @@ export type ScreenId =
   | "team-members";
 
 export type Study = {
+  studyId?: number;
   title: string;
   tags: string[];
   people: string;
