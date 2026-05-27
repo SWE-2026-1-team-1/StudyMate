@@ -604,11 +604,14 @@ export function MyPage() {
 
     try {
       await profileApi.delete();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
       setProfileData(null);
       setHasProfile(false);
       setIsEditingProfile(false);
       setInterestTags([]);
-      setProfileMessage({ type: "success", text: "프로필이 삭제되었습니다." });
+      navigate(ROUTE_PATHS.login, { replace: true });
     } catch (error) {
       setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 삭제하지 못했습니다.") });
     } finally {
