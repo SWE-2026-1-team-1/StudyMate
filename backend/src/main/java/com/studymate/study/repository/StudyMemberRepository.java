@@ -75,4 +75,17 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     """)
     Optional<StudyMember> findActiveManager(@Param("studyId") long studyId,
                                             @Param("userId") long userId);
+
+    // 도메인 C (Sprint 4) -----
+
+    @Query("""
+        select sm from StudyMember sm, com.studymate.application.domain.StudyRole r
+        where r.code = sm.roleCode
+          and sm.studyId = :studyId
+          and sm.userId  = :userId
+          and sm.isActive = true
+          and r.canPostNotice = true
+    """)
+    Optional<StudyMember> findActiveNoticeWriter(@Param("studyId") long studyId,
+                                                 @Param("userId") long userId);
 }
