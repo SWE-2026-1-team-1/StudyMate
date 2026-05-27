@@ -313,6 +313,16 @@ export function Panel({ title, className = "", children }: { title: string; clas
   return <section className={`panel ${className}`}>{title && <h2>{title}</h2>}{children}</section>;
 }
 
-export function StatusRow({ title, meta, status }: { title: string; meta: string; status: string }) {
-  return <div className="status-row"><span className="icon-tile" /><div><b>{title}</b><small>{meta}</small></div><em>{status}</em></div>;
+export function Toast({ type = "success", children }: { type?: "success" | "error"; children: ReactNode }) {
+  return <div className={`attendance-toast ${type}`} role="status">{children}</div>;
+}
+
+export function StatusRow({ title, meta, status, action }: { title: string; meta: string; status: string; action?: ReactNode }) {
+  return (
+    <div className="status-row">
+      <span className="icon-tile" />
+      <div><b>{title}</b><small>{meta}</small></div>
+      <div className="status-row-actions"><em>{status}</em>{action}</div>
+    </div>
+  );
 }

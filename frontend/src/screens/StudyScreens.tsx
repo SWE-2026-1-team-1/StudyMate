@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { createStudy, profile, studies, studyDetail, topics } from "../data";
-import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
+import { createStudy, studies, studyDetail, topics } from "../data";
+import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard, Toast } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
+import { applicationsApi, type MyApplicationResponse } from "../api/applications";
 import { profileApi, type ProfileResponse } from "../api/profile";
 import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
 import type { Study, StudyDetailData } from "../types";
@@ -33,6 +34,28 @@ type CreateStudyDraft = {
   meetingCycle: string;
 };
 type ProfileMessage = { type: "success" | "error"; text: string } | null;
+type ToastMessage = { type: "success" | "error"; text: string } | null;
+
+function formatApplicationDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "지원일 확인 불가";
+
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} 지원`;
+}
+
+function getApplicationStatusLabel(status: MyApplicationResponse["status"]) {
+  if (status === "APPROVED") return "ACCEPTED";
+  if (status === "REJECTED") return "REJECTED";
+  return "PENDING";
+}
+
+function mapMyApplication(application: MyApplicationResponse) {
+  return {
+    title: application.studyTitle,
+    meta: `${formatApplicationDate(application.appliedAt)} · ${application.studyStatus === "OPEN" ? "모집중" : "마감"}`,
+    status: getApplicationStatusLabel(application.status),
+  };
+}
 
 function normalizeTag(tag: string) {
   return tag.startsWith("#") ? tag : `#${tag}`;
@@ -193,8 +216,8 @@ function getStudyApiErrorMessage(error: unknown, fallback: string) {
   }
 
   const status = response.status ?? 0;
-  if (status === 401 || status === 403) return "로그인 후 스터디를 생성할 수 있습니다.";
-  if (status >= 500) return "서버에서 스터디 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  if (status === 401 || status === 403) return "로그인 후 이용할 수 있습니다.";
+  if (status >= 500) return "서버에서 요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 
   return fallback;
 }
@@ -403,12 +426,26 @@ function TopicScroller({ selectedTopic, onSelect }: { selectedTopic: string; onS
 }
 
 export function StudyDetail() {
+  const navigate = useNavigate();
   const { studyId } = useParams();
+  const toastTimerRef = useRef<number | null>(null);
   const [detail, setDetail] = useState<StudyDetailData | null>(studyDetail);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [isApplying, setIsApplying] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
+
+  const showToast = (message: Exclude<ToastMessage, null>) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2200);
+  };
 
   useEffect(() => {
+    setHasApplied(false);
+    setToastMessage(null);
+
     if (!studyId || Number.isNaN(Number(studyId))) {
       setDetail(studyDetail);
       setDetailError("");
@@ -439,9 +476,63 @@ export function StudyDetail() {
     };
   }, [studyId]);
 
+  useEffect(() => {
+    if (!studyId || Number.isNaN(Number(studyId)) || !localStorage.getItem("accessToken")) return;
+
+    let isMounted = true;
+
+    applicationsApi.listMine({ page: 0, size: 100 })
+      .then((response) => {
+        if (!isMounted) return;
+        setHasApplied(response.applications.some((application) => (
+          String(application.studyId) === String(studyId) && application.status === "PENDING"
+        )));
+      })
+      .catch(() => {
+        if (isMounted) setHasApplied(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studyId]);
+
+  const handleApplicationClick = async () => {
+    setToastMessage(null);
+
+    if (!studyId || Number.isNaN(Number(studyId))) {
+      showToast({ type: "error", text: "샘플 스터디에는 지원할 수 없습니다." });
+      return;
+    }
+
+    if (!localStorage.getItem("accessToken")) {
+      navigate(ROUTE_PATHS.login, { replace: true });
+      return;
+    }
+
+    setIsApplying(true);
+    try {
+      if (hasApplied) {
+        await studiesApi.cancelApplication(studyId);
+        setHasApplied(false);
+        showToast({ type: "success", text: "스터디 지원을 취소했습니다." });
+        return;
+      }
+
+      await studiesApi.apply(studyId, { message: "스터디에 참여하고 싶습니다." });
+      setHasApplied(true);
+      showToast({ type: "success", text: "스터디 지원이 완료되었습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getStudyApiErrorMessage(error, hasApplied ? "스터디 지원을 취소하지 못했습니다." : "스터디에 지원하지 못했습니다.") });
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
   return (
     <Shell>
       <section className="detail-page content-container">
+        {toastMessage && <Toast type={toastMessage.type}>{toastMessage.text}</Toast>}
         {isLoadingDetail && <p className="section-note">스터디 상세 정보를 불러오는 중입니다.</p>}
         {detailError && <p className="section-note">{detailError}</p>}
         {detail && (
@@ -456,7 +547,9 @@ export function StudyDetail() {
                 </div>
               </div>
               <div className="detail-actions">
-                <button className="primary" type="button">참여하기 <span><img src={rocketIcon} alt="" /></span></button>
+                <button className={`primary${hasApplied ? " cancel-application" : ""}`} type="button" onClick={handleApplicationClick} disabled={isApplying}>
+                  {isApplying ? "처리 중..." : hasApplied ? "신청 취소" : "참여하기"} <span><img src={rocketIcon} alt="" /></span>
+                </button>
                 <button className="share" type="button"><img src={shareIcon} alt="Share" /></button>
               </div>
             </div>
@@ -491,6 +584,7 @@ export function StudyDetail() {
 
 export function MyPage() {
   const navigate = useNavigate();
+  const toastTimerRef = useRef<number | null>(null);
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
   const [interestTags, setInterestTags] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -501,8 +595,18 @@ export function MyPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
-  const [showProfileSavedToast, setShowProfileSavedToast] = useState(false);
   const [profileMessage, setProfileMessage] = useState<ProfileMessage>(null);
+  const [myApplications, setMyApplications] = useState<MyApplicationResponse[]>([]);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
+  const [applicationLoadError, setApplicationLoadError] = useState("");
+  const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
+  const [cancellingApplicationId, setCancellingApplicationId] = useState<number | null>(null);
+
+  const showToast = (message: Exclude<ToastMessage, null>) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2200);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -531,6 +635,30 @@ export function MyPage() {
       })
       .finally(() => {
         if (isMounted) setIsLoadingProfile(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingApplications(true);
+    setApplicationLoadError("");
+
+    applicationsApi.listMine()
+      .then((response) => {
+        if (!isMounted) return;
+        setMyApplications(response.applications);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setMyApplications([]);
+        setApplicationLoadError("지원 현황을 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingApplications(false);
       });
 
     return () => {
@@ -577,10 +705,9 @@ export function MyPage() {
       setProfileData(savedProfile);
       setHasProfile(true);
       setIsEditingProfile(false);
-      setShowProfileSavedToast(true);
-      window.setTimeout(() => setShowProfileSavedToast(false), 2200);
+      showToast({ type: "success", text: "프로필이 저장되었습니다." });
     } catch (error) {
-      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
+      showToast({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
     } finally {
       setIsSavingProfile(false);
     }
@@ -613,15 +740,30 @@ export function MyPage() {
       setInterestTags([]);
       navigate(ROUTE_PATHS.login, { replace: true });
     } catch (error) {
-      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 삭제하지 못했습니다.") });
+      showToast({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 삭제하지 못했습니다.") });
     } finally {
       setIsSavingProfile(false);
     }
   };
 
+  const handleCancelApplication = async (application: MyApplicationResponse) => {
+    if (cancellingApplicationId) return;
+
+    setCancellingApplicationId(application.applicationId);
+    try {
+      await studiesApi.cancelApplication(application.studyId);
+      setMyApplications((current) => current.filter((item) => item.applicationId !== application.applicationId));
+      showToast({ type: "success", text: "스터디 지원을 취소했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getStudyApiErrorMessage(error, "스터디 지원을 취소하지 못했습니다.") });
+    } finally {
+      setCancellingApplicationId(null);
+    }
+  };
+
   return (
     <main className="profile-page content-container">
-      {showProfileSavedToast && <div className="attendance-toast" role="status">프로필이 저장되었습니다.</div>}
+      {toastMessage && <Toast type={toastMessage.type}>{toastMessage.text}</Toast>}
       <section className="profile-hero">
         <div className="profile-photo-wrap">
           <Avatar name="user" className="profile-photo" />
@@ -681,7 +823,27 @@ export function MyPage() {
           </div>
           <h2>지원 현황</h2>
           <Panel title="" className="application-panel">
-            {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
+            {isLoadingApplications && <p className="section-note">지원 현황을 불러오는 중입니다.</p>}
+            {applicationLoadError && <p className="section-note form-error">{applicationLoadError}</p>}
+            {!isLoadingApplications && !applicationLoadError && myApplications.length === 0 && (
+              <p className="section-note">아직 지원한 스터디가 없습니다.</p>
+            )}
+            {myApplications.map((application) => (
+              <StatusRow
+                key={application.applicationId}
+                {...mapMyApplication(application)}
+                action={application.status === "PENDING" ? (
+                  <button
+                    className="application-cancel-button"
+                    type="button"
+                    onClick={() => handleCancelApplication(application)}
+                    disabled={cancellingApplicationId === application.applicationId}
+                  >
+                    {cancellingApplicationId === application.applicationId ? "취소 중..." : "취소"}
+                  </button>
+                ) : undefined}
+              />
+            ))}
           </Panel>
         </div>
       </section>

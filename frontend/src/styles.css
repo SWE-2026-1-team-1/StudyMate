@@ -1618,6 +1618,12 @@ input:disabled {
   justify-content: center;
   gap: calc(12px * var(--ui-scale));
 }
+.detail-actions .primary.cancel-application {
+  background: #ff6262;
+  color: #ffffff;
+  box-shadow: 0 calc(14px * var(--ui-scale)) calc(18px * var(--ui-scale))
+    rgba(239, 68, 68, 0.22);
+}
 .detail-actions .primary span {
   display: flex;
   align-items: center;
@@ -2099,6 +2105,24 @@ input:disabled {
   font-style: normal;
   font-weight: 700;
 }
+.status-row-actions {
+  display: flex;
+  gap: calc(10px * var(--ui-scale));
+  align-items: center;
+}
+.application-cancel-button {
+  border: 0;
+  border-radius: calc(999px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(16px * var(--ui-scale));
+  background: #fca5a5;
+  color: #991b1b;
+  font-family: inherit;
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 800;
+}
+.application-cancel-button:disabled {
+  opacity: 0.62;
+}
 
 /* Create */
 .create-page {
@@ -2449,6 +2473,15 @@ input:disabled {
   box-shadow: 0 calc(16px * var(--ui-scale)) calc(36px * var(--ui-scale))
     rgba(85, 72, 237, 0.24);
   animation: attendance-toast-fade 2200ms ease both;
+}
+.attendance-toast.success {
+  background: var(--purple-2);
+}
+.attendance-toast.error {
+  background: #fecaca;
+  color: #991b1b;
+  box-shadow: 0 calc(16px * var(--ui-scale)) calc(36px * var(--ui-scale))
+    rgba(248, 113, 113, 0.22);
 }
 @keyframes attendance-toast-fade {
   0% {

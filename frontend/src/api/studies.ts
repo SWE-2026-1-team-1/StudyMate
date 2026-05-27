@@ -65,6 +65,13 @@ export type UpdateStudyResponse = {
   updatedAt: string;
 };
 
+export type StudyApplicationResponse = {
+  applicationId: number;
+  studyId: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  appliedAt: string;
+};
+
 export const studiesApi = {
   list: async ({ page = 0, size = 20 }: { page?: number; size?: number } = {}) => {
     const response = await apiClient.get<StudyListResponse>("/api/studies", {
@@ -90,5 +97,14 @@ export const studiesApi = {
 
   delete: async (studyId: number | string) => {
     await apiClient.delete(`/api/studies/${studyId}`);
+  },
+
+  apply: async (studyId: number | string, data: { message: string }) => {
+    const response = await apiClient.post<StudyApplicationResponse>(`/api/studies/${studyId}/applications`, data);
+    return response.data;
+  },
+
+  cancelApplication: async (studyId: number | string) => {
+    await apiClient.delete(`/api/studies/${studyId}/applications/my`);
   },
 };
