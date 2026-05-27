@@ -40,10 +40,18 @@ public class StudyMember {
     protected StudyMember() {}
 
     public static StudyMember createLeader(Long studyId, Long userId) {
+        return create(studyId, userId, "LEADER");
+    }
+
+    public static StudyMember createMember(Long studyId, Long userId) {
+        return create(studyId, userId, "MEMBER");
+    }
+
+    private static StudyMember create(Long studyId, Long userId, String roleCode) {
         StudyMember sm = new StudyMember();
         sm.studyId = studyId;
         sm.userId = userId;
-        sm.roleCode = "LEADER";
+        sm.roleCode = roleCode;
         sm.isActive = true;
         LocalDateTime now = LocalDateTime.now();
         sm.joinedAt = now;

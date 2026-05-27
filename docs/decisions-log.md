@@ -17,6 +17,7 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 | 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 TINYINT UNSIGNED를 INT UNSIGNED로 일괄 변경 (D-016). |
 | 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 study_member.left_reason 컬럼을 VARCHAR(20)로 변경 (D-017). |
 | 2026-05-20 | AI | 스터디 삭제 시 동시성 보장을 위해 비관적 락(Pessimistic Lock) 적용 (D-018). |
+| 2026-05-27 | 채범수 | Sprint 4 (지원/수락 + 팀 운영) 진입. 스코프·기본 정책 묶음 채택 (D-020). 알림(RE-SF3-04) 본 스프린트 제외 (P-009). |
 
 ---
 
@@ -312,6 +313,109 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 - 근거: 소규모 팀 + 비정형 개발 속도 우선 환경에서 CI는 코드 오염 방지 게이트 역할을 하나, 현재 코드베이스 품질 기준상 테스트 실패가 상시 발생할 수 있어 배포를 차단하는 오버헤드가 더 큼. CI 유지보수 비용 > 효익.
 - 영향 파일: `.github/workflows/backend-ci.yml` (삭제), `.github/workflows/frontend-ci.yml` (삭제), `.github/workflows/backend-deploy.yml` (test 잡 제거)
 - 결정일: 2026-05-27
+
+### D-020. Sprint 4 작업 범위 + 구현 디폴트 묶음
+- 범위: Sprint 4 (지원/수락 + 팀 운영)
+- 결정일: 2026-05-27
+
+#### 20.a 작업 범위 (엔드포인트 17건)
+- **도메인 A — 신청/수락/거절 (RE-SF3-01~03 + 마이페이지 신청 현황)**
+  - `POST   /api/studies/{studyId}/applications` 지원
+  - `DELETE /api/studies/{studyId}/applications/my` 신청 취소
+  - `GET    /api/teams/{teamId}/applications` 지원자 목록
+  - `POST   /api/teams/{teamId}/applications/{applicationId}/approve` 수락
+  - `POST   /api/teams/{teamId}/applications/{applicationId}/reject` 거절
+  - `GET    /api/mypage/applications` 내 지원 현황
+- **도메인 B — 멤버 관리 (RE-SF4-04/05 + 팀원 목록)**
+  - `GET    /api/teams/{teamId}/members`
+  - `DELETE /api/teams/{teamId}/members/{memberId}` 강퇴
+  - `DELETE /api/teams/{teamId}/members/me` 탈퇴
+- **도메인 C — 팀 게시판 (RE-SF4-02/03)**
+  - 게시글 CRUD 5건: `GET (목록) / POST / GET {id} / PATCH {id} / DELETE {id}`
+  - 댓글 CRUD 4건: `GET / POST / PATCH / DELETE`
+- 진행 순서: A → B → C 순차 (C 의 권한 가드가 A·B 의 멤버십 위에 깔리므로).
+- 본 스프린트 제외: 알림(RE-SF3-04, **P-009**), 출석(RE-SF6, Sprint 5+), 추천(RE-SF5).
+
+#### 20.b 자동 마감 — 수락 시 정원 도달하면 OPEN → CLOSED
+- `approve` 핸들러 트랜잭션 안에서 `current_member_count + 1 == maxMembers` 이면 `study.status = CLOSED` 로 같이 UPDATE.
+- Sprint 3 에서 비워둔 진입점(`docs/study-class-design.md`의 자동 마감 메서드) 의 책임은 본 결정으로 채워짐.
+- 강퇴/탈퇴에 의한 `CLOSED → OPEN` 자동 복구는 **하지 않음** (D-014 의 수동 토글 유지).
+
+#### 20.c 동시성 — study row PESSIMISTIC_WRITE 락
+- 적용 메서드: 지원(`apply`), 수락(`approve`), 거절(`reject`), 강퇴(`kick`), 탈퇴(`leave`).
+- 락 대상: 해당 `study` row (`SELECT ... FOR UPDATE`). `study_member` / `application` 변경은 락 보유 상태에서 처리.
+- RE-NF-06 (정원 초과 동시 수락 차단) 의 구현 책임. 통합 멀티스레드 테스트는 D-009 기조 유지 — **하지 않음**. 코드 락만으로 닫는다.
+
+#### 20.d 게시글 NOTICE 권한
+- `post.type ENUM('NOTICE','FREE')`.
+  - **NOTICE** = 공지글. 상단 고정·강조 노출 의도. 운영 정보(모임 시간 변경 등) 용.
+  - **FREE** = 자유 게시글.
+- 권한 분기 근거: `study_role.can_post_notice` (LEADER=1, MEMBER=0).
+- 룰: NOTICE 작성 요청 시 작성자 `study_member` 의 `study_role.can_post_notice = 1` 검증. 위반 시 `403 FORBIDDEN`. FREE 는 활성 멤버 모두 가능.
+
+#### 20.e 신청 거절 매트릭스 (지원 시점)
+| 케이스 | HTTP | ErrorCode |
+|---|---|---|
+| 스터디 미존재 (is_deleted=1 포함) | 404 | `NOT_FOUND` |
+| 스터디 CLOSED | 409 | `STUDY_FULL` (시트 명세 어휘) |
+| 이미 활성 멤버 (`study_member.is_active=1`) | 409 | `ALREADY_MEMBER` (신규) |
+| 이미 PENDING 신청 보유 | 409 | `ALREADY_APPLIED` (시트 명세) |
+| 이미 ACCEPTED 처리된 과거 신청 + 현재 활성 멤버 | → 위 `ALREADY_MEMBER` 와 동일 처리 |
+| 이미 REJECTED 신청 보유 | 재신청 허용 (별도 row INSERT) |
+
+- DB 유니크 부분제약 (MySQL 미지원) 대신 서비스 레이어에서 study row 락 + `application` 조회로 중복 차단.
+- 신규 ErrorCode 2건: `ALREADY_MEMBER` (409), `STUDY_FULL` (409, 본 스프린트 신규).
+
+#### 20.f 수락/거절 권한 + 처리 룰
+- 권한: `study_member.is_active=1` AND `study_role.can_approve_application=1` (LEADER).
+- 수락 시: `application.status = 'ACCEPTED'`, `processed_by_member_id` 기록, `study_member` LEADER 외 row 신규 INSERT (`role_code='MEMBER'`, `is_active=1`), `study.current_member_count += 1`, 20.b 의 자동 마감 분기.
+- 거절 시: `application.status = 'REJECTED'`, `processed_by_member_id` 기록. study/멤버 카운트 변경 없음.
+- 대상 application 이 이미 ACCEPTED/REJECTED 인 경우 `409 INVALID_APPLICATION_STATUS` (신규 ErrorCode).
+- 본 스프린트 신규 ErrorCode 3건 총합: `ALREADY_MEMBER`, `STUDY_FULL`, `INVALID_APPLICATION_STATUS`.
+
+#### 20.g 게시글/댓글 soft delete
+- 두 테이블 모두 `is_deleted` 컬럼 사용 (이미 스키마에 있음). 모든 조회 쿼리는 `is_deleted=0` 조건 기본 적용.
+- 물리 삭제 안 함.
+
+#### 20.h 댓글 수정/삭제 권한
+- 댓글: **작성자 본인만**. LEADER 권한과 무관 (시트 명세의 "댓글 수정 권한이 없습니다" 어휘 채택).
+- 게시글: 작성자 본인 + LEADER (`can_post_notice` 보유자) 모두 삭제 가능. 수정은 작성자 본인만.
+
+#### 20.i 강퇴/탈퇴 시 `study_member` 갱신
+- 강퇴 (`DELETE /members/{memberId}`): `is_active=0`, `left_reason='KICKED'`, `left_at=now()`, `study.current_member_count -= 1`. LEADER 본인 강퇴 불가 → `409 CANNOT_REMOVE_LEADER` (신규).
+- 탈퇴 (`DELETE /members/me`): `is_active=0`, `left_reason='VOLUNTARY'`, `left_at=now()`, `study.current_member_count -= 1`. LEADER 본인 탈퇴 불가 → `409 CONFLICT "팀장은 탈퇴할 수 없습니다."` (시트 명세 어휘 그대로).
+- `left_reason` 은 D-017 에 의해 `VARCHAR(20)`. enum 값: `VOLUNTARY` / `KICKED` / `STUDY_CLOSED` (마지막은 D-020 범위 외, 향후).
+- 멤버 카운트 감소에 의한 `CLOSED → OPEN` 자동 복구는 하지 않음 (20.b).
+
+#### 20.j 리더 탈퇴 금지
+- `DELETE /api/teams/{teamId}/members/me` 호출자가 LEADER 면 `409 CONFLICT` (어휘 시트 명세 그대로). 별도 ErrorCode 신설 없음.
+
+#### 20.k 본 스프린트 신규 ErrorCode 정리 (총 4건)
+| Code | HTTP | 의미 |
+|---|---|---|
+| `ALREADY_APPLIED` | 409 | 이미 PENDING 신청 존재 (시트 명세 어휘) |
+| `ALREADY_MEMBER` | 409 | 이미 활성 멤버 |
+| `STUDY_FULL` | 409 | CLOSED 또는 정원 도달 (시트 명세 어휘) |
+| `INVALID_APPLICATION_STATUS` | 409 | 처리 대상 application 이 PENDING 아님 |
+
+#### 20.l DB 스키마 변경 — 본 스프린트
+- **변경 없음**. `application` / `post` / `post_comment` / `study_member.left_reason` 모두 기존 스키마 (`studymate_schema.sql`) 그대로 사용.
+- 이유: D-006 / D-016 / D-017 에서 이미 본 도메인 테이블·컬럼 타입 정비 완료.
+- 만약 작업 중 마이그레이션 필요 발생 시 **별도 D-NNN 등록 후** marcus 와 진행 (claude-context §1 의 스키마 변경 주의 정책).
+
+---
+
+### P-009. RE-SF3-04 알림 도메인 — Sprint 4 제외 / SRS 분리 검토 필요
+- 출처: SRS RE-SF3-04 ↔ 시트 4주차 작업 항목
+- 문제:
+  - RE-SF3-04 ("지원/수락 알림") 는 SRS 상 우선순위 中, 시트 4주차 #37~#39 작업 목록에는 누락.
+  - 본 스프린트(D-020) 에서 명시 제외. 검사기준 No.13 (지원/수락 알림) 도 본 스프린트로 닫지 않음.
+  - 별도 관점: 알림은 RE-SF3 (지원/수락 시스템) 하위 요구사항이지만 도메인 책임이 다름 (사용자 간 메시지 전송 + 영속 + 읽음 처리). **SRS 구조상 별도 상위 요구사항 RE-SF7 (알림) 으로 분리하는 편이 자연스럽다는 marcus 의견 (2026-05-27).**
+- 결정 보류 항목:
+  - 알림 도메인 본격 구현 시점 (Sprint 5 / Sprint 6).
+  - SRS 의 알림 요구사항 위치 — RE-SF3 잔류 vs RE-SF7 신설 분리.
+- 담당: 채범수
+- 상태: **OPEN**. Sprint 4 완료 후 marcus 가 SRS 개정 시점에 닫을 예정.
 
 ---
 

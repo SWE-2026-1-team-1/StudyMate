@@ -9,11 +9,16 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface StudyRepository extends JpaRepository<Study, Long> {
 
     Optional<Study> findByIdAndIsDeletedFalse(long id);
+
+    @Query("select s from Study s where s.id in :ids")
+    List<Study> findAllByIdIn(@Param("ids") Collection<Long> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Study s where s.id = :id and s.isDeleted = false")

@@ -20,4 +20,17 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     Optional<StudyMember> findActiveLeader(@Param("studyId") long studyId);
 
     boolean existsByStudyIdAndUserIdAndRoleCodeAndIsActiveTrue(long studyId, long userId, String roleCode);
+
+    boolean existsByStudyIdAndUserIdAndIsActiveTrue(long studyId, long userId);
+
+    @Query("""
+        select sm from StudyMember sm, com.studymate.application.domain.StudyRole r
+        where r.code = sm.roleCode
+          and sm.studyId = :studyId
+          and sm.userId  = :userId
+          and sm.isActive = true
+          and r.canApproveApplication = true
+    """)
+    Optional<StudyMember> findActiveApprover(@Param("studyId") long studyId,
+                                             @Param("userId") long userId);
 }
