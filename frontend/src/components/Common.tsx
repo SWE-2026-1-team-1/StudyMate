@@ -2,6 +2,7 @@ import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
 import { useState, type ChangeEvent, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { authApi } from "../api/auth";
 import { getTopLevelRoute, ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
 import userProfileIcon from "../assets/user_profile.svg";
@@ -46,12 +47,20 @@ export function TopBar() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("userId");
-    setShowProfileMenu(false);
-    navigate(ROUTE_PATHS.login, { replace: true });
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    try {
+      if (refreshToken) {
+        await authApi.logout({ refreshToken });
+      }
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
+      setShowProfileMenu(false);
+      navigate(ROUTE_PATHS.login, { replace: true });
+    }
   };
 
   return (
