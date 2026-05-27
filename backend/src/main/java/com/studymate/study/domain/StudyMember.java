@@ -60,10 +60,40 @@ public class StudyMember {
         return sm;
     }
 
-    public Long getId()       { return id; }
-    public Long getStudyId()  { return studyId; }
-    public Long getUserId()   { return userId; }
-    public String getRoleCode(){ return roleCode; }
-    public boolean isActive() { return isActive; }
-    public String getName()   { return null; }
+    public void kick() {
+        if (!this.isActive) {
+            throw new IllegalStateException("already inactive member");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        this.isActive   = false;
+        this.leftReason = MemberLeftReason.KICKED.name();
+        this.leftAt     = now;
+        this.updatedAt  = now;
+    }
+
+    public void leave() {
+        if (!this.isActive) {
+            throw new IllegalStateException("already inactive member");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        this.isActive   = false;
+        this.leftReason = MemberLeftReason.VOLUNTARY.name();
+        this.leftAt     = now;
+        this.updatedAt  = now;
+    }
+
+    public boolean isLeader() {
+        return "LEADER".equals(this.roleCode);
+    }
+
+    public Long getId()             { return id; }
+    public Long getStudyId()        { return studyId; }
+    public Long getUserId()         { return userId; }
+    public String getRoleCode()     { return roleCode; }
+    public boolean isActive()       { return isActive; }
+    public LocalDateTime getJoinedAt(){ return joinedAt; }
+    public LocalDateTime getLeftAt(){ return leftAt; }
+    public String getLeftReason()   { return leftReason; }
+    public LocalDateTime getUpdatedAt(){ return updatedAt; }
+    public String getName()         { return null; }
 }
