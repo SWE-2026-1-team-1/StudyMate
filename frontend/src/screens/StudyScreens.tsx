@@ -4,7 +4,7 @@ import { createStudy, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
-import { profileApi } from "../api/profile";
+import { profileApi, type ProfileResponse } from "../api/profile";
 import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
 import type { Study, StudyDetailData } from "../types";
 
@@ -517,6 +517,7 @@ export function MyPage() {
         setProfileMajor(response.major);
         setProfileBio(response.bio);
         setInterestTags(response.interestTags.map(normalizeTag));
+        setProfileData(response);
         setHasProfile(true);
       })
       .catch((error) => {
@@ -572,13 +573,44 @@ export function MyPage() {
     };
 
     try {
-      await (hasProfile ? profileApi.update(payload) : profileApi.create(payload));
+      const savedProfile = await (hasProfile ? profileApi.update(payload) : profileApi.create(payload));
+      setProfileData(savedProfile);
       setHasProfile(true);
       setIsEditingProfile(false);
       setShowProfileSavedToast(true);
       window.setTimeout(() => setShowProfileSavedToast(false), 2200);
     } catch (error) {
       setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (profileData) {
+      setProfileName(profileData.name);
+      setProfileSchool(profileData.school);
+      setProfileMajor(profileData.major);
+      setProfileBio(profileData.bio);
+      setInterestTags(profileData.interestTags.map(normalizeTag));
+    }
+    setIsEditingProfile(false);
+    setProfileMessage(null);
+  };
+
+  const handleDeleteProfile = async () => {
+    setIsSavingProfile(true);
+    setProfileMessage(null);
+
+    try {
+      await profileApi.delete();
+      setProfileData(null);
+      setHasProfile(false);
+      setIsEditingProfile(false);
+      setInterestTags([]);
+      setProfileMessage({ type: "success", text: "프로필이 삭제되었습니다." });
+    } catch (error) {
+      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 삭제하지 못했습니다.") });
     } finally {
       setIsSavingProfile(false);
     }
@@ -607,15 +639,15 @@ export function MyPage() {
               {profileBio && <small>{profileBio}</small>}
             </div>
           )}
-          {(profileMessage || profileError) && (
-            <p className={`profile-feedback ${profileError ? "error" : "success"}`}>
-              {profileError || profileMessage}
+          {profileMessage && (
+            <p className={`profile-feedback ${profileMessage.type}`}>
+              {profileMessage.text}
             </p>
           )}
         </div>
         <div className="profile-actions">
-          <button className="primary" type="button" disabled={isLoadingProfile || isSavingProfile || !profileData} onClick={handleEditButton}>
-            {isSavingProfile ? "저장 중" : isEditingProfile ? "저장하기" : "프로필 편집"}
+          <button className="primary" type="button" disabled={isLoadingProfile || isSavingProfile} onClick={handleProfileAction}>
+            {isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집"}
           </button>
           {isEditingProfile && (
             <button className="profile-plain-button" type="button" disabled={isSavingProfile} onClick={handleCancelEdit}>
@@ -623,9 +655,6 @@ export function MyPage() {
             </button>
           )}
         </div>
-        <button className="primary" type="button" onClick={handleProfileAction} disabled={isLoadingProfile || isSavingProfile}>
-          {isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집"}
-        </button>
       </section>
       {isLoadingProfile && <p className="section-note">프로필 정보를 불러오는 중입니다.</p>}
       {profileMessage && <p className={`section-note form-${profileMessage.type}`}>{profileMessage.text}</p>}
