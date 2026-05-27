@@ -69,7 +69,7 @@ class ProfileIntegrationTest {
         assertThat(body.get("name")).isEqualTo("테스터");
         assertThat(body.get("school")).isEqualTo("Ajou University");
         assertThat(body.get("major")).isEqualTo("Computer Science");
-        assertThat((List<?>) body.get("interestTags")).containsExactly("Algorithms", "React");
+        assertThat((List<Object>) body.get("interestTags")).containsExactly("Algorithms", "React");
     }
 
     @Test
@@ -94,7 +94,7 @@ class ProfileIntegrationTest {
 
         Map<?, ?> body = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
         assertThat(body.get("name")).isEqualTo("새 이름");
-        assertThat((List<?>) body.get("interestTags")).containsExactly("AI", "Backend");
+        assertThat((List<Object>) body.get("interestTags")).containsExactly("AI", "Backend");
 
         Map<String, Object> saved = jdbcTemplate.queryForMap(
                 "SELECT name, school, major, bio, interest_tags FROM app_user WHERE id = ?", userId);
@@ -128,7 +128,7 @@ class ProfileIntegrationTest {
         Map<?, ?> body = objectMapper.readValue(result.getResponse().getContentAsString(), Map.class);
         assertThat(body.get("name")).isEqualTo("생성 저장");
         assertThat(body.get("bio")).isNull();
-        assertThat((List<?>) body.get("interestTags")).containsExactly("UX", "Research");
+        assertThat((List<Object>) body.get("interestTags")).containsExactly("UX", "Research");
     }
 
     @Test

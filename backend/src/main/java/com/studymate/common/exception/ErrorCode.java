@@ -26,7 +26,11 @@ public enum ErrorCode {
     CONFLICT              (HttpStatus.CONFLICT,      "이미 가입된 이메일입니다."),
     INVALID_MAX_MEMBERS   (HttpStatus.CONFLICT,      "현재 멤버 수보다 작게 줄일 수 없습니다. 먼저 팀원을 강퇴해 주세요."),
     INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT,   "현재 상태에서 요청한 상태로 전환할 수 없습니다."),
-    INVALID_STATUS_FOR_UPDATE(HttpStatus.CONFLICT,   "마감된 스터디에서는 변경할 수 없는 항목입니다.");
+    INVALID_STATUS_FOR_UPDATE(HttpStatus.CONFLICT,   "마감된 스터디에서는 변경할 수 없는 항목입니다."),
+    ALREADY_APPLIED       (HttpStatus.CONFLICT,      "이미 신청한 스터디입니다."),
+    ALREADY_MEMBER        (HttpStatus.CONFLICT,      "이미 해당 스터디의 멤버입니다."),
+    STUDY_FULL            (HttpStatus.CONFLICT,      "모집이 마감되었거나 정원이 가득 찼습니다."),
+    INVALID_APPLICATION_STATUS(HttpStatus.CONFLICT,  "이미 처리된 신청입니다.");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;
