@@ -13,6 +13,7 @@ export type ScreenId =
   | "team-members";
 
 export type Study = {
+  studyId?: number;
   title: string;
   tags: string[];
   people: string;
@@ -86,6 +87,13 @@ export type JoinRequest = {
 export type TeamPost = {
   tag: string;
   title: string;
+  excerpt: string;
+  replies: {
+    author: string;
+    avatar: string;
+    time: string;
+    body: string;
+  }[];
   author: string;
   avatar: string;
 };

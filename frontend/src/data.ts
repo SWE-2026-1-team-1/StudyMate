@@ -106,12 +106,60 @@ export const createStudy = {
 };
 
 export const teamPosts: TeamPost[] = [
-  { tag: "RESEARCH", title: "중간 발표 자료 준비 및 데이터 분석 공유", author: "김지수", avatar: "c" },
-  { tag: "ENGINEERING", title: "알고리즘 구현 중 엣지 케이스 처리 질문", author: "박민호", avatar: "a" },
-  { tag: "ENGINEERING", title: "알고리즘 구현 중 엣지 케이스 처리 질문", author: "박민호", avatar: "a" },
+  {
+    tag: "RESEARCH",
+    title: "중간 발표 자료 준비 및 데이터 분석 공유",
+    excerpt: "지난주에 수집한 데이터 전처리가 완료되었습니다. 시각화 자료를 확인하시고 추가하고 싶은 차트가 있다면 댓글로 알려주세요.",
+    replies: [
+      {
+        author: "이수지",
+        avatar: "a",
+        time: "1h ago",
+        body: "데이터 전처리 과정에서 이상치(outlier) 처리는 어떻게 하셨나요? 시각화 전에 그 부분이 궁금합니다.",
+      },
+      {
+        author: "최준호",
+        avatar: "b",
+        time: "45m ago",
+        body: "정리 감사합니다! 파이 차트보다는 히트맵을 하나 추가하면 데이터 분포를 보기 더 좋을 것 같아요.",
+      },
+    ],
+    author: "김지수",
+    avatar: "c",
+  },
+  {
+    tag: "ENGINEERING",
+    title: "알고리즘 구현 중 엣지 케이스 처리 질문",
+    excerpt: "BFS 구현 중에 순환 구조가 있는 그래프에서 무한 루프가 발생하는데, 방문 처리를 리스트 대신 셋으로 하는 게 더 효율적일까요?",
+    replies: [
+      {
+        author: "김지수",
+        avatar: "c",
+        time: "4h ago",
+        body: "방문 여부만 확인한다면 셋이 더 적합해 보여요. 순서가 필요할 때만 리스트를 같이 쓰면 될 것 같습니다.",
+      },
+    ],
+    author: "박민호",
+    avatar: "a",
+  },
+  {
+    tag: "ENGINEERING",
+    title: "알고리즘 구현 중 엣지 케이스 처리 질문",
+    excerpt: "BFS 구현 중에 순환 구조가 있는 그래프에서 무한 루프가 발생하는데, 방문 처리를 리스트 대신 셋으로 하는 게 더 효율적일까요?",
+    replies: [
+      {
+        author: "김지수",
+        avatar: "c",
+        time: "4h ago",
+        body: "방문 여부만 확인한다면 셋이 더 적합해 보여요. 순서가 필요할 때만 리스트를 같이 쓰면 될 것 같습니다.",
+      },
+    ],
+    author: "박민호",
+    avatar: "a",
+  },
 ];
 
-export const attendanceDates = ["10/01", "10/03", "10/05", "10/08", "10/10", "10/12", "10/15", "10/17", "10/19 (Next)"];
+export const attendanceDates = ["10/01", "10/03", "10/05", "10/08", "10/10", "10/12", "10/15", "10/17", "10/19"];
 
 export const attendanceMembers: AttendanceMember[] = [
   { name: "김지수", avatar: "user", checks: ["present", "present", "absent", "present", "present", "present", "present", "present", "scheduled"] },

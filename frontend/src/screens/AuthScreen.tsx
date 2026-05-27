@@ -5,6 +5,7 @@ import { TagList } from "../components/TagInput";
 import { AvatarStack, Field } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import { authApi } from "../api/auth";
+import { profileApi } from "../api/profile";
 import graduationCapIcon from "../assets/graduation-cap.svg";
 import globeIcon from "../assets/language.svg";
 
@@ -75,6 +76,9 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
   const [tags, setTags] = useState<string[]>(authInterestTags);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [school, setSchool] = useState("");
+  const [major, setMajor] = useState("");
+  const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [emailCode, setEmailCode] = useState("");
@@ -99,6 +103,10 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
     setMessage(null);
     setEmailCode("");
     setName("");
+    setSchool("");
+    setMajor("");
+    setBio("");
+    setTags(authInterestTags);
     setPassword("");
     setPasswordConfirm("");
     setIsEmailVerified(false);
@@ -166,14 +174,10 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
     }
   };
 
-  const handleSignup = async () => {
+  const handleSignupCredentials = () => {
     if (!isEmailVerified) {
       setSignupStep(1);
       setMessage({ type: "error", text: "이메일 인증을 먼저 완료해 주세요." });
-      return;
-    }
-    if (!name.trim()) {
-      setMessage({ type: "error", text: "이름을 입력해 주세요." });
       return;
     }
     if (!password || !passwordConfirm) {
@@ -186,6 +190,43 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
     }
     if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/.test(password)) {
       setMessage({ type: "error", text: "비밀번호는 영문과 숫자를 포함한 8~20자여야 합니다." });
+      return;
+    }
+
+    if (tags.length === 0) {
+      setMessage({ type: "error", text: "관심 태그를 하나 이상 선택해 주세요." });
+      return;
+    }
+
+    setMessage(null);
+    setSignupStep(3);
+  };
+
+  const handleSignup = async () => {
+    if (!isEmailVerified) {
+      setSignupStep(1);
+      setMessage({ type: "error", text: "이메일 인증을 먼저 완료해 주세요." });
+      return;
+    }
+    if (!password || !passwordConfirm || password !== passwordConfirm) {
+      setSignupStep(2);
+      setMessage({ type: "error", text: "비밀번호를 다시 확인해 주세요." });
+      return;
+    }
+    if (!name.trim()) {
+      setMessage({ type: "error", text: "이름을 입력해 주세요." });
+      return;
+    }
+    if (!school.trim()) {
+      setMessage({ type: "error", text: "학교를 입력해 주세요." });
+      return;
+    }
+    if (!major.trim()) {
+      setMessage({ type: "error", text: "전공을 입력해 주세요." });
+      return;
+    }
+    if (!bio.trim()) {
+      setMessage({ type: "error", text: "자기소개를 입력해 주세요." });
       return;
     }
 
@@ -202,6 +243,15 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
 
       const loginResponse = await authApi.login({ email: email.trim(), password });
       persistAuthSession(loginResponse);
+
+      await profileApi.create({
+        name: name.trim(),
+        school: school.trim(),
+        major: major.trim(),
+        bio: bio.trim(),
+        interestTags: tags.map((tag) => tag.replace(/^#/, "")).filter(Boolean),
+      });
+
       navigate(ROUTE_PATHS.home);
     } catch (error) {
       setMessage({ type: "error", text: getApiErrorMessage(error, "회원가입에 실패했습니다.") });
@@ -338,9 +388,8 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
               <p>비밀번호와 관심사를 설정해 주세요.</p>
               <form className="form-stack" onSubmit={(event) => {
                 event.preventDefault();
-                handleSignup();
+                handleSignupCredentials();
               }}>
-                <Field label="이름" placeholder="홍길동" value={name} onChange={(event) => setName(event.target.value)} disabled={isSubmitting} />
                 <Field label="비밀번호" placeholder="********" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={isSubmitting} />
                 <Field label="비밀번호 확인" placeholder="********" type="password" autoComplete="new-password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} disabled={isSubmitting} />
                 
@@ -349,6 +398,39 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
                 
                 <div className="button-group">
                   <button className="secondary wide" type="button" onClick={() => setSignupStep(1)} disabled={isSubmitting}>
+                    이전 단계
+                  </button>
+                  <button className="primary wide" type="submit" disabled={isSubmitting}>
+                    다음 단계 <span>→</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* === 회원가입: 스텝 3 === */}
+            <div className={`auth-phase ${!isLogin && signupStep === 3 ? 'active' : 'inactive-right'}`}>
+              <h2>프로필을 완성해요</h2>
+              <p>스터디 매칭에 사용할 기본 정보를 입력해 주세요.</p>
+              <form className="form-stack" onSubmit={(event) => {
+                event.preventDefault();
+                handleSignup();
+              }}>
+                <Field label="이름" placeholder="홍길동" value={name} onChange={(event) => setName(event.target.value)} disabled={isSubmitting} />
+                <Field label="학교" placeholder="Ajou University" value={school} onChange={(event) => setSchool(event.target.value)} disabled={isSubmitting} />
+                <Field label="전공" placeholder="Software Engineering" value={major} onChange={(event) => setMajor(event.target.value)} disabled={isSubmitting} />
+                <label>
+                  자기소개
+                  <textarea
+                    placeholder="관심 분야와 함께 공부하고 싶은 목표를 적어주세요."
+                    value={bio}
+                    onChange={(event) => setBio(event.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </label>
+                {message && !isLogin && signupStep === 3 && <p className={`auth-feedback signup-feedback ${message.type}`}>{message.text}</p>}
+                
+                <div className="button-group">
+                  <button className="secondary wide" type="button" onClick={() => setSignupStep(2)} disabled={isSubmitting}>
                     이전 단계
                   </button>
                   <button className="primary wide" type="submit" disabled={isSubmitting}>

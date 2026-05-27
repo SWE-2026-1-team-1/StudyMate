@@ -1,14 +1,14 @@
 import { apiClient } from "./client";
 
-export type ProfilePayload = {
+export type ProfileSaveRequest = {
   name: string;
-  school?: string | null;
-  major?: string | null;
-  bio?: string | null;
+  school: string;
+  major: string;
+  bio: string;
   interestTags: string[];
 };
 
-export type ProfileResponse = ProfilePayload & {
+export type ProfileResponse = ProfileSaveRequest & {
   userId: number;
   email: string;
   createdAt: string;
@@ -20,15 +20,18 @@ export const profileApi = {
     const response = await apiClient.get<ProfileResponse>("/api/profile");
     return response.data;
   },
-  create: async (data: ProfilePayload) => {
+
+  create: async (data: ProfileSaveRequest) => {
     const response = await apiClient.post<ProfileResponse>("/api/profile", data);
     return response.data;
   },
-  update: async (data: ProfilePayload) => {
+
+  update: async (data: ProfileSaveRequest) => {
     const response = await apiClient.put<ProfileResponse>("/api/profile", data);
     return response.data;
   },
-  remove: async () => {
+
+  delete: async () => {
     await apiClient.delete("/api/profile");
   },
 };

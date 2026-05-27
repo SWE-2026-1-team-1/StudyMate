@@ -35,6 +35,9 @@ export const TagList = ({ tags, onRemoveTag, onAddTag }: { tags: string[], onRem
 
   return (
     <div className="keyword-set auth-keywords tag-list-container">
+      {tags.length === 0 && (
+        <span className="empty-tag-hint">관심 태그를 입력해 주세요</span>
+      )}
       {tags.map((tag, index) => {
         const colorStyle = TAG_COLORS[index % TAG_COLORS.length];
         return (

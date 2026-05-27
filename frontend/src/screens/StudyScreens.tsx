@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { authInterestTags, createStudy, exploreStudies, profile, studies, studyDetail, topics } from "../data";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { createStudy, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
-import { profileApi, type ProfilePayload, type ProfileResponse } from "../api/profile";
+import { profileApi } from "../api/profile";
+import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
+import type { Study, StudyDetailData } from "../types";
 
 import { allMockStudies } from "../mockStudies";
 
@@ -12,6 +14,215 @@ import informIcon from "../assets/inform.svg";
 import rocketIcon from "../assets/rocket.svg";
 import ruleIcon from "../assets/rule.svg";
 import shareIcon from "../assets/share.svg";
+
+const studyListRequest = {
+  promise: null as Promise<StudySummaryResponse[]> | null,
+};
+const studyDetailRequests = new Map<string, Promise<StudyDetailResponse>>();
+const studyShuffleSeed = Math.random().toString(36).slice(2);
+const createStudyDraftKey = "studyMate.createStudyDraft";
+const createStudyPathPrefix = "/studies/new";
+
+type CreateStudyDraft = {
+  title: string;
+  description: string;
+  tags: string[];
+  languages: string;
+  maxMembers: string;
+  durationWeeks: string;
+  meetingCycle: string;
+};
+type ProfileMessage = { type: "success" | "error"; text: string } | null;
+
+function normalizeTag(tag: string) {
+  return tag.startsWith("#") ? tag : `#${tag}`;
+}
+
+function resolveStudyTone(tags: string[]): Study["tone"] {
+  const normalized = tags.join(" ").toLowerCase();
+  if (normalized.includes("english") || normalized.includes("영어")) return "english";
+  if (normalized.includes("algorithm") || normalized.includes("알고리즘") || normalized.includes("cs")) return "algorithm";
+  if (normalized.includes("design") || normalized.includes("디자인")) return "design";
+  return "tech";
+}
+
+function mapStudySummary(study: StudySummaryResponse): Study {
+  const tags = study.tags.map(normalizeTag);
+  return {
+    studyId: study.studyId,
+    title: study.title,
+    tags,
+    people: `${study.currentMembers}/${study.maxMembers}`,
+    duration: study.status === "OPEN" ? "모집중" : "마감",
+    tone: resolveStudyTone(tags),
+  };
+}
+
+function mapStudyDetail(detail: StudyDetailResponse): StudyDetailData {
+  const tags = detail.tags.map(normalizeTag);
+  return {
+    id: String(detail.studyId),
+    title: detail.title,
+    subtitle: detail.meetingCycle || `${detail.durationWeeks}주 스터디`,
+    description: [detail.description],
+    tags,
+    location: detail.languages.length > 0 ? detail.languages.join(" / ") : "온라인",
+    info: [
+      { label: "진행 방식", value: detail.meetingCycle || "미정" },
+      { label: "스터디 기간", value: `${detail.durationWeeks}주` },
+      { label: "현재 인원", value: `${detail.currentMembers} / ${detail.maxMembers}명` },
+    ],
+    rules: studyDetail.rules,
+    members: [
+      {
+        name: detail.createdBy.name,
+        role: "Leader",
+        avatar: "a",
+      },
+    ],
+  };
+}
+
+function fetchStudySummaries() {
+  if (!studyListRequest.promise) {
+    studyListRequest.promise = studiesApi.list({ page: 0, size: 20 })
+      .then((response) => response.studies)
+      .catch((error) => {
+        studyListRequest.promise = null;
+        throw error;
+      });
+  }
+
+  return studyListRequest.promise;
+}
+
+export function clearStudyApiCache() {
+  studyListRequest.promise = null;
+  studyDetailRequests.clear();
+}
+
+function fetchStudyDetail(studyId: string) {
+  const cachedRequest = studyDetailRequests.get(studyId);
+  if (cachedRequest) return cachedRequest;
+
+  const request = studiesApi.get(studyId).catch((error) => {
+    studyDetailRequests.delete(studyId);
+    throw error;
+  });
+  studyDetailRequests.set(studyId, request);
+  return request;
+}
+
+function stableShuffleStudies(list: Study[], topic: string) {
+  return [...list].sort((a, b) => {
+    const aRank = getStableShuffleRank(`${studyShuffleSeed}:${topic}:${a.studyId ?? a.title}`);
+    const bRank = getStableShuffleRank(`${studyShuffleSeed}:${topic}:${b.studyId ?? b.title}`);
+    return aRank - bRank;
+  });
+}
+
+function getStableShuffleRank(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function getDefaultCreateStudyDraft(): CreateStudyDraft {
+  return {
+    title: "",
+    description: "",
+    tags: [],
+    languages: "",
+    maxMembers: "4",
+    durationWeeks: "8",
+    meetingCycle: createStudy.schedule[0]?.value ?? "",
+  };
+}
+
+function clearCreateStudyDraft() {
+  sessionStorage.removeItem(createStudyDraftKey);
+}
+
+function isCreateStudyPath(pathname: string) {
+  return pathname === createStudyPathPrefix || pathname.startsWith(`${createStudyPathPrefix}/`);
+}
+
+function readCreateStudyDraft() {
+  const fallback = getDefaultCreateStudyDraft();
+  const rawDraft = sessionStorage.getItem(createStudyDraftKey);
+  if (!rawDraft) return fallback;
+
+  try {
+    const parsedDraft = JSON.parse(rawDraft) as Partial<CreateStudyDraft>;
+    return {
+      ...fallback,
+      ...parsedDraft,
+      tags: Array.isArray(parsedDraft.tags) ? parsedDraft.tags : fallback.tags,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function toCreateStudyRequest(draft: CreateStudyDraft): CreateStudyRequest {
+  return {
+    title: draft.title.trim(),
+    description: draft.description.trim(),
+    tags: draft.tags.map((tag) => tag.replace(/^#/, "")).filter(Boolean),
+    languages: draft.languages.split(",").map((language) => language.trim()).filter(Boolean),
+    maxMembers: Math.max(2, Number.parseInt(draft.maxMembers, 10) || 2),
+    durationWeeks: Math.max(1, Number.parseInt(draft.durationWeeks, 10) || 1),
+    meetingCycle: draft.meetingCycle.trim(),
+  };
+}
+
+function getStudyApiErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") return fallback;
+
+  const response = (error as { response?: { status?: number; data?: unknown } }).response;
+  if (!response) return "서버에 연결할 수 없습니다.";
+
+  const data = response.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  const status = response.status ?? 0;
+  if (status === 401 || status === 403) return "로그인 후 스터디를 생성할 수 있습니다.";
+  if (status >= 500) return "서버에서 스터디 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+  return fallback;
+}
+
+function getProfileApiErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") return fallback;
+
+  const response = (error as { response?: { status?: number; data?: unknown } }).response;
+  if (!response) return "서버에 연결할 수 없습니다.";
+
+  const data = response.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  if (response.status === 401 || response.status === 403) return "로그인 후 프로필을 확인할 수 있습니다.";
+  if (response.status === 404) return "프로필 정보를 찾을 수 없습니다.";
+  if ((response.status ?? 0) >= 500) return "서버에서 프로필 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+  return fallback;
+}
+
+function getApiStatus(error: unknown) {
+  if (!error || typeof error !== "object") return undefined;
+  return (error as { response?: { status?: number } }).response?.status;
+}
 
 export function MainDashboard() {
   const navigate = useNavigate();
@@ -90,6 +301,32 @@ function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof us
 function ExploreResults() {
   const navigate = useNavigate();
   const [selectedTopic, setSelectedTopic] = useState(topics[0]);
+  const [apiStudies, setApiStudies] = useState<Study[] | null>(null);
+  const [isLoadingStudies, setIsLoadingStudies] = useState(true);
+  const [studyLoadError, setStudyLoadError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchStudySummaries()
+      .then((studySummaries) => {
+        if (!isMounted) return;
+        setApiStudies(studySummaries.map(mapStudySummary));
+        setStudyLoadError("");
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setApiStudies(null);
+        setStudyLoadError("스터디 목록을 불러오지 못해 샘플 데이터를 표시합니다.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingStudies(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   let title = `${selectedTopic.replace("#", "")} 추천 스터디`;
   let subtitle = `${selectedTopic} 관련 선별된 스터디 그룹입니다.`;
@@ -104,6 +341,18 @@ function ExploreResults() {
 
   // useMemo를 사용해 태그가 바뀔 때마다 스터디 목록을 셔플(무작위 정렬)합니다.
   const displayedStudies = useMemo(() => {
+    if (apiStudies) {
+      if (selectedTopic === "#전체" || selectedTopic === "#추천") {
+        return stableShuffleStudies(apiStudies, selectedTopic);
+      }
+
+      return stableShuffleStudies(apiStudies.filter((study) => study.tags.includes(selectedTopic)), selectedTopic);
+    }
+
+    if (isLoadingStudies) {
+      return [];
+    }
+
     let list = [];
     if (selectedTopic === "#전체") {
       list = [...allMockStudies];
@@ -112,19 +361,25 @@ function ExploreResults() {
     } else {
       list = allMockStudies.filter((study) => study.tags.includes(selectedTopic));
     }
-    // 간단한 무작위 셔플 로직 적용
-    return list.sort(() => Math.random() - 0.5);
-  }, [selectedTopic]);
+    return stableShuffleStudies(list, selectedTopic);
+  }, [apiStudies, isLoadingStudies, selectedTopic]);
 
   return (
     <div className="dashboard-content-panel explore-panel">
       <TopicScroller selectedTopic={selectedTopic} onSelect={setSelectedTopic} />
       <section className="section-block">
         <SectionTitle title={title} subtitle={subtitle} />
+        {isLoadingStudies && <p className="section-note">스터디 목록을 불러오는 중입니다.</p>}
+        {studyLoadError && <p className="section-note">{studyLoadError}</p>}
         {/* key에 selectedTopic을 주어 리액트가 아예 요소를 다시 그리게 만들어 진입 애니메이션을 재활성시킵니다 */}
         <div key={selectedTopic} className="study-grid explore-grid">
           {displayedStudies.map((study, index) => (
-            <StudyCard key={`${study.title}-${index}`} study={study} action="신청하기" onAction={() => navigate(ROUTE_PATHS.studyDetail())} />
+            <StudyCard
+              key={study.studyId ?? study.title}
+              study={study}
+              action="신청하기"
+              onAction={() => navigate(ROUTE_PATHS.studyDetail(study.studyId != null ? String(study.studyId) : undefined))}
+            />
           ))}
         </div>
       </section>
@@ -148,45 +403,87 @@ function TopicScroller({ selectedTopic, onSelect }: { selectedTopic: string; onS
 }
 
 export function StudyDetail() {
+  const { studyId } = useParams();
+  const [detail, setDetail] = useState<StudyDetailData | null>(studyDetail);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState("");
+
+  useEffect(() => {
+    if (!studyId || Number.isNaN(Number(studyId))) {
+      setDetail(studyDetail);
+      setDetailError("");
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingDetail(true);
+    setDetail(null);
+
+    fetchStudyDetail(studyId)
+      .then((response) => {
+        if (!isMounted) return;
+        setDetail(mapStudyDetail(response));
+        setDetailError("");
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setDetail(studyDetail);
+        setDetailError("스터디 상세 정보를 불러오지 못해 샘플 데이터를 표시합니다.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingDetail(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studyId]);
+
   return (
     <Shell>
       <section className="detail-page content-container">
-        <div className="detail-top">
-          <div>
-            <h1>{studyDetail.title}</h1>
-            <h2>{studyDetail.subtitle}</h2>
-            <div className="detail-meta">
-              {studyDetail.tags.map((tag) => <span key={tag}>{tag}</span>)}
-              <span className="location">{studyDetail.location}</span>
+        {isLoadingDetail && <p className="section-note">스터디 상세 정보를 불러오는 중입니다.</p>}
+        {detailError && <p className="section-note">{detailError}</p>}
+        {detail && (
+          <>
+            <div className="detail-top">
+              <div>
+                <h1>{detail.title}</h1>
+                <h2>{detail.subtitle}</h2>
+                <div className="detail-meta">
+                  {detail.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                  <span className="location">{detail.location}</span>
+                </div>
+              </div>
+              <div className="detail-actions">
+                <button className="primary" type="button">참여하기 <span><img src={rocketIcon} alt="" /></span></button>
+                <button className="share" type="button"><img src={shareIcon} alt="Share" /></button>
+              </div>
             </div>
-          </div>
-          <div className="detail-actions">
-            <button className="primary" type="button">참여하기 <span><img src={rocketIcon} alt="" /></span></button>
-            <button className="share" type="button"><img src={shareIcon} alt="Share" /></button>
-          </div>
-        </div>
-        <div className="detail-grid">
-          <section className="panel wide-panel">
-            <h2><span><img src={informIcon} alt="" /></span> 스터디 소개</h2>
-            {studyDetail.description.map((p, i) => <p key={i}>{p}</p>)}
-          </section>
-          <aside className="panel detail-info-card">
-            <dl>
-              {studyDetail.info.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-            </dl>
-          </aside>
-          <section className="panel rules-panel">
-            <h2><span><img src={ruleIcon} alt="" /></span> 규칙</h2>
-            {studyDetail.rules.map((rule) => <Rule key={rule.no} {...rule} />)}
-          </section>
-          <aside className="panel member-card">
-            <h2>참여중인 멤버</h2>
-            {studyDetail.members.map(({ name, role, avatar }) => (
-              <div className="member-mini" key={name}><Avatar name={avatar} /><span><b>{name}</b><small>{role}</small></span></div>
-            ))}
-            <button type="button">+ 4 Seats Available</button>
-          </aside>
-        </div>
+            <div className="detail-grid">
+              <section className="panel wide-panel">
+                <h2><span><img src={informIcon} alt="" /></span> 스터디 소개</h2>
+                {detail.description.map((p, i) => <p key={i}>{p}</p>)}
+              </section>
+              <aside className="panel detail-info-card">
+                <dl>
+                  {detail.info.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                </dl>
+              </aside>
+              <section className="panel rules-panel">
+                <h2><span><img src={ruleIcon} alt="" /></span> 규칙</h2>
+                {detail.rules.map((rule) => <Rule key={rule.no} {...rule} />)}
+              </section>
+              <aside className="panel member-card">
+                <h2>참여중인 멤버</h2>
+                {detail.members.map(({ name, role, avatar }) => (
+                  <div className="member-mini" key={name}><Avatar name={avatar} /><span><b>{name}</b><small>{role}</small></span></div>
+                ))}
+                <button type="button">+ 4 Seats Available</button>
+              </aside>
+            </div>
+          </>
+        )}
       </section>
     </Shell>
   );
@@ -197,53 +494,48 @@ export function MyPage() {
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
   const [interestTags, setInterestTags] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profileName, setProfileName] = useState("");
-  const [profileSchool, setProfileSchool] = useState("");
-  const [profileMajor, setProfileMajor] = useState("");
-  const [profileBio, setProfileBio] = useState("");
+  const [profileName, setProfileName] = useState("박지민 (Jimin Park)");
+  const [profileSchool, setProfileSchool] = useState("Ajou University");
+  const [profileMajor, setProfileMajor] = useState("Software Engineering");
+  const [profileBio, setProfileBio] = useState("함께 꾸준히 성장하는 스터디를 선호합니다.");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [profileMessage, setProfileMessage] = useState("");
-  const [profileError, setProfileError] = useState("");
+  const [hasProfile, setHasProfile] = useState(false);
+  const [showProfileSavedToast, setShowProfileSavedToast] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<ProfileMessage>(null);
 
   useEffect(() => {
-    let ignore = false;
+    let isMounted = true;
+    setIsLoadingProfile(true);
+    setProfileMessage(null);
 
-    const loadProfile = async () => {
-      setIsLoadingProfile(true);
-      setProfileError("");
-      if (!localStorage.getItem("accessToken")) {
-        setProfileError("로그인 후 프로필을 관리할 수 있습니다.");
-        setIsLoadingProfile(false);
-        return;
-      }
-      try {
-        const data = await profileApi.get();
-        if (ignore) return;
-        applyProfile(data);
-      } catch {
-        if (!ignore) {
-          setProfileError("프로필을 불러오지 못했습니다. 로그인 후 다시 시도해주세요.");
+    profileApi.get()
+      .then((response) => {
+        if (!isMounted) return;
+        setProfileName(response.name);
+        setProfileSchool(response.school);
+        setProfileMajor(response.major);
+        setProfileBio(response.bio);
+        setInterestTags(response.interestTags.map(normalizeTag));
+        setHasProfile(true);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        if (getApiStatus(error) === 404) {
+          setHasProfile(false);
+          setProfileMessage({ type: "error", text: "프로필을 먼저 저장해 주세요." });
+          return;
         }
-      } finally {
-        if (!ignore) setIsLoadingProfile(false);
-      }
-    };
+        setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필 정보를 불러오지 못했습니다.") });
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingProfile(false);
+      });
 
-    loadProfile();
     return () => {
-      ignore = true;
+      isMounted = false;
     };
   }, []);
-
-  const applyProfile = (data: ProfileResponse) => {
-    setProfileData(data);
-    setProfileName(data.name ?? "");
-    setProfileSchool(data.school ?? "");
-    setProfileMajor(data.major ?? "");
-    setProfileBio(data.bio ?? "");
-    setInterestTags(data.interestTags ?? []);
-  };
 
   const handleRemoveInterestTag = (tagToRemove: string) => {
     setInterestTags(interestTags.filter((tag) => tag !== tagToRemove));
@@ -256,73 +548,45 @@ export function MyPage() {
     }
   };
 
-  const buildPayload = (): ProfilePayload => ({
-    name: profileName.trim(),
-    school: profileSchool.trim() || null,
-    major: profileMajor.trim() || null,
-    bio: profileBio.trim() || null,
-    interestTags,
-  });
-
-  const handleEditButton = async () => {
-    setProfileMessage("");
-    setProfileError("");
-
+  const handleProfileAction = async () => {
     if (!isEditingProfile) {
       setIsEditingProfile(true);
+      setProfileMessage(null);
       return;
     }
 
     if (!profileName.trim()) {
-      setProfileError("이름을 입력해주세요.");
+      setProfileMessage({ type: "error", text: "이름을 입력해 주세요." });
       return;
     }
 
     setIsSavingProfile(true);
+    setProfileMessage(null);
+
+    const payload = {
+      name: profileName.trim(),
+      school: profileSchool.trim(),
+      major: profileMajor.trim(),
+      bio: profileBio.trim(),
+      interestTags: interestTags.map((tag) => tag.replace(/^#/, "")).filter(Boolean),
+    };
+
     try {
-      const payload = buildPayload();
-      const saved = profileData ? await profileApi.update(payload) : await profileApi.create(payload);
-      applyProfile(saved);
+      await (hasProfile ? profileApi.update(payload) : profileApi.create(payload));
+      setHasProfile(true);
       setIsEditingProfile(false);
-      setProfileMessage("프로필이 저장되었습니다.");
-    } catch {
-      setProfileError("프로필 저장에 실패했습니다.");
+      setShowProfileSavedToast(true);
+      window.setTimeout(() => setShowProfileSavedToast(false), 2200);
+    } catch (error) {
+      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
     } finally {
       setIsSavingProfile(false);
     }
   };
 
-  const handleCancelEdit = () => {
-    if (profileData) {
-      applyProfile(profileData);
-    }
-    setIsEditingProfile(false);
-    setProfileMessage("");
-    setProfileError("");
-  };
-
-  const handleDeleteProfile = async () => {
-    if (!window.confirm("프로필과 계정을 삭제하시겠습니까?")) return;
-
-    setIsSavingProfile(true);
-    setProfileMessage("");
-    setProfileError("");
-    try {
-      await profileApi.remove();
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("userId");
-      navigate(ROUTE_PATHS.login);
-    } catch {
-      setProfileError("프로필 삭제에 실패했습니다.");
-      setIsSavingProfile(false);
-    }
-  };
-
-  const schoolLine = [profileSchool, profileMajor].filter(Boolean).join(" · ");
-
   return (
     <main className="profile-page content-container">
+      {showProfileSavedToast && <div className="attendance-toast" role="status">프로필이 저장되었습니다.</div>}
       <section className="profile-hero">
         <div className="profile-photo-wrap">
           <Avatar name="user" className="profile-photo" />
@@ -331,17 +595,16 @@ export function MyPage() {
         <div className="profile-copy">
           {isEditingProfile ? (
             <div className="profile-edit-fields">
-              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" />
-              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" />
-              <input value={profileMajor} onChange={(event) => setProfileMajor(event.target.value)} aria-label="전공 정보" />
-              <input value={profileBio} onChange={(event) => setProfileBio(event.target.value)} aria-label="프로필 소개" />
+              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" placeholder="이름" disabled={isSavingProfile} />
+              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" placeholder="학교" disabled={isSavingProfile} />
+              <input value={profileMajor} onChange={(event) => setProfileMajor(event.target.value)} aria-label="전공 정보" placeholder="전공" disabled={isSavingProfile} />
+              <textarea value={profileBio} onChange={(event) => setProfileBio(event.target.value)} aria-label="자기소개" placeholder="자기소개" disabled={isSavingProfile} />
             </div>
           ) : (
             <div className="profile-text-lines">
-              <h1>{isLoadingProfile ? "프로필을 불러오는 중" : profileName || "이름 없음"}</h1>
-              <p>{schoolLine || "학교와 전공을 입력해주세요"}</p>
-              {profileData?.email && <small>{profileData.email}</small>}
-              {profileBio && <em>{profileBio}</em>}
+              <h1>{profileName}</h1>
+              <p>{profileSchool}{profileMajor ? ` · ${profileMajor}` : ""}</p>
+              {profileBio && <small>{profileBio}</small>}
             </div>
           )}
           {(profileMessage || profileError) && (
@@ -360,7 +623,12 @@ export function MyPage() {
             </button>
           )}
         </div>
+        <button className="primary" type="button" onClick={handleProfileAction} disabled={isLoadingProfile || isSavingProfile}>
+          {isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집"}
+        </button>
       </section>
+      {isLoadingProfile && <p className="section-note">프로필 정보를 불러오는 중입니다.</p>}
+      {profileMessage && <p className={`section-note form-${profileMessage.type}`}>{profileMessage.text}</p>}
       <section className="profile-grid">
         <div className="profile-study-section">
           <Panel title="" className="keyword-panel keyword-strip">
@@ -391,9 +659,87 @@ export function MyPage() {
 
 export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const next = step === 1 ? ROUTE_PATHS.createRules : step === 2 ? ROUTE_PATHS.createSchedule : ROUTE_PATHS.home;
   const previous = step === 2 ? ROUTE_PATHS.createBasic : step === 3 ? ROUTE_PATHS.createRules : ROUTE_PATHS.home;
   const title = step === 1 ? "기본 정보를 입력해주세요" : step === 2 ? "규칙 및 태그를 입력해주세요" : "일정 설정";
+  const [draft, setDraft] = useState<CreateStudyDraft>(() => readCreateStudyDraft());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    const handlePageHide = () => clearCreateStudyDraft();
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCreateStudyPath(location.pathname)) {
+      clearCreateStudyDraft();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    return () => {
+      window.setTimeout(() => {
+        if (!isCreateStudyPath(window.location.pathname)) {
+          clearCreateStudyDraft();
+        }
+      }, 0);
+    };
+  }, []);
+
+  const updateDraft = (nextDraft: CreateStudyDraft) => {
+    setDraft(nextDraft);
+    sessionStorage.setItem(createStudyDraftKey, JSON.stringify(nextDraft));
+  };
+
+  const handleCancel = () => {
+    if (step === 1) {
+      clearCreateStudyDraft();
+      navigate(previous);
+      return;
+    }
+
+    navigate(previous);
+  };
+
+  const handleNext = async () => {
+    setSubmitError("");
+
+    if (step !== 3) {
+      navigate(next);
+      return;
+    }
+
+    const payload = toCreateStudyRequest(draft);
+    if (!payload.title || !payload.description || payload.tags.length === 0 || payload.languages.length === 0 || !payload.meetingCycle) {
+      setSubmitError("제목, 소개, 태그, 사용 언어/기술, 모임 주기를 모두 입력해 주세요.");
+      return;
+    }
+
+    if (!localStorage.getItem("accessToken")) {
+      setSubmitError("로그인 후 스터디를 생성할 수 있습니다.");
+      clearCreateStudyDraft();
+      navigate(ROUTE_PATHS.login);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const createdStudy = await studiesApi.create(payload);
+      clearCreateStudyDraft();
+      clearStudyApiCache();
+      navigate(ROUTE_PATHS.studyDetail(String(createdStudy.studyId)));
+    } catch (error) {
+      setSubmitError(getStudyApiErrorMessage(error, "스터디를 생성하지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해 주세요."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <main className="create-page content-container">
@@ -401,15 +747,16 @@ export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
       <Stepper step={step} />
       <section className="create-card">
         <h2>{title}</h2>
-        {step === 1 && <BasicForm />}
-        {step === 2 && <RulesForm />}
-        {step === 3 && <ScheduleForm />}
+        {submitError && <p className="section-note form-error">{submitError}</p>}
+        {step === 1 && <BasicForm draft={draft} onChange={updateDraft} />}
+        {step === 2 && <RulesForm draft={draft} onChange={updateDraft} />}
+        {step === 3 && <ScheduleForm draft={draft} onChange={updateDraft} />}
         <footer className="form-footer">
-          <button className="plain" type="button" onClick={() => navigate(previous)}>
+          <button className="plain" type="button" onClick={handleCancel} disabled={isSubmitting}>
             {step === 1 ? "× 취소하기" : "← 이전으로"}
           </button>
-          <button className="primary" type="button" onClick={() => navigate(next)}>
-            {step === 3 ? "완료" : "다음 단계로 이동"} <span>→</span>
+          <button className="primary" type="button" onClick={handleNext} disabled={isSubmitting}>
+            {step === 3 ? (isSubmitting ? "생성 중..." : "완료") : "다음 단계로 이동"} <span>→</span>
           </button>
         </footer>
       </section>
@@ -430,7 +777,7 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
-function BasicForm() {
+function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
   const defaultCategory = createStudy.categories.find((category) => category.selected)?.label ?? createStudy.categories[0].label;
   const defaultVisibility = createStudy.visibilityOptions.find((option) => option.selected)?.label ?? createStudy.visibilityOptions[0].label;
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
@@ -438,7 +785,12 @@ function BasicForm() {
 
   return (
     <div className="create-fields">
-      <Field label="스터디 제목" placeholder="예: [CS 기초] 기술 면접 대비 올인원 스터디" />
+      <Field
+        label="스터디 제목"
+        placeholder="예: [CS 기초] 기술 면접 대비 올인원 스터디"
+        value={draft.title}
+        onChange={(event) => onChange({ ...draft, title: event.target.value })}
+      />
       <label>
         카테고리 선택
         <div className="category-grid">
@@ -455,9 +807,22 @@ function BasicForm() {
           ))}
         </div>
       </label>
-      <label>스터디 목표 및 소개<textarea placeholder="스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요." /></label>
+      <label>
+        스터디 목표 및 소개
+        <textarea
+          placeholder="스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요."
+          value={draft.description}
+          onChange={(event) => onChange({ ...draft, description: event.target.value })}
+        />
+      </label>
       <div className="split-fields">
-        <Field label="모집 인원" placeholder="4                                   명" />
+        <Field
+          label="모집 인원"
+          placeholder="4"
+          type="number"
+          value={draft.maxMembers}
+          onChange={(event) => onChange({ ...draft, maxMembers: event.target.value })}
+        />
         <label>
           공개 여부
           <div className="visibility-row">
@@ -479,49 +844,55 @@ function BasicForm() {
   );
 }
 
-function RulesForm() {
-  const [tags, setTags] = useState<string[]>(authInterestTags);
-
+function RulesForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
+    onChange({ ...draft, tags: draft.tags.filter((tag) => tag !== tagToRemove) });
   };
 
   const handleAddTag = (newTag: string) => {
     const normalizedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
-    if (!tags.includes(normalizedTag)) {
-      setTags([...tags, normalizedTag]);
+    if (!draft.tags.includes(normalizedTag)) {
+      onChange({ ...draft, tags: [...draft.tags, normalizedTag] });
     }
   };
 
   return (
     <div className="create-fields">
-      <Field label="규칙 및 태그" placeholder="규칙을 작성해주세요!" />
-      <input placeholder="규칙을 작성해주세요!" />
-      <input placeholder="규칙을 작성해주세요!" />
-      <TagList tags={tags} onRemoveTag={handleRemoveTag} onAddTag={handleAddTag} />
+      <Field
+        label="사용 언어/기술"
+        placeholder="예: JavaScript, React, Spring"
+        value={draft.languages}
+        onChange={(event) => onChange({ ...draft, languages: event.target.value })}
+      />
+      <label>
+        태그
+        <TagList tags={draft.tags} onRemoveTag={handleRemoveTag} onAddTag={handleAddTag} />
+      </label>
     </div>
   );
 }
 
-function ScheduleForm() {
-  const [scheduleFields, setScheduleFields] = useState(() =>
-    createStudy.schedule.reduce<Record<string, string>>((fields, { label, value }) => {
-      fields[label] = value;
-      return fields;
-    }, {})
-  );
-
+function ScheduleForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
   return (
     <div className="schedule-list">
-      {createStudy.schedule.map(({ label }) => (
-        <label key={label}>
-          <b>{label}</b>
-          <input
-            value={scheduleFields[label]}
-            onChange={(event) => setScheduleFields({ ...scheduleFields, [label]: event.target.value })}
-          />
-        </label>
-      ))}
+      <label>
+        <b>모임 주기</b>
+        <input
+          value={draft.meetingCycle}
+          onChange={(event) => onChange({ ...draft, meetingCycle: event.target.value })}
+          placeholder="예: 매주 수요일 16:00"
+        />
+      </label>
+      <label>
+        <b>스터디 기간</b>
+        <input
+          type="number"
+          min="1"
+          value={draft.durationWeeks}
+          onChange={(event) => onChange({ ...draft, durationWeeks: event.target.value })}
+          placeholder="8"
+        />
+      </label>
     </div>
   );
 }
