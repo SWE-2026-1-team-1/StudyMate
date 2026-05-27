@@ -1152,6 +1152,16 @@ input:disabled {
 .form-error {
   color: #dc2626;
 }
+.form-success {
+  color: #0f9f6e;
+}
+.empty-tag-hint {
+  border: calc(1px * var(--ui-scale)) dashed #d7deea !important;
+  background: #fff !important;
+  color: #8a94a6 !important;
+  font-size: calc(15px * var(--ui-scale));
+  font-weight: 600;
+}
 .study-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1820,7 +1830,8 @@ input:disabled {
   gap: calc(16px * var(--ui-scale));
   max-width: calc(520px * var(--ui-scale));
 }
-.profile-edit-fields input {
+.profile-edit-fields input,
+.profile-edit-fields textarea {
   height: calc(42px * var(--ui-scale));
   border: calc(1px * var(--ui-scale)) solid #d7deea;
   border-radius: calc(14px * var(--ui-scale));
@@ -1832,9 +1843,22 @@ input:disabled {
   font-weight: 600;
   outline: none;
 }
-.profile-edit-fields input:focus {
+.profile-edit-fields textarea {
+  min-height: calc(84px * var(--ui-scale));
+  resize: vertical;
+  padding-top: calc(10px * var(--ui-scale));
+}
+.profile-edit-fields input:focus,
+.profile-edit-fields textarea:focus {
   border-color: var(--purple);
   box-shadow: 0 0 0 calc(3px * var(--ui-scale)) rgba(85, 72, 237, 0.12);
+}
+.profile-text-lines small {
+  max-width: calc(620px * var(--ui-scale));
+  color: #7b8797;
+  font-size: calc(17px * var(--ui-scale));
+  font-weight: 500;
+  line-height: 1.5;
 }
 .profile-hero .primary {
   position: relative;

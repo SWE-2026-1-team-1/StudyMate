@@ -4,6 +4,7 @@ import { createStudy, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
+import { profileApi } from "../api/profile";
 import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
 import type { Study, StudyDetailData } from "../types";
 
@@ -31,6 +32,7 @@ type CreateStudyDraft = {
   durationWeeks: string;
   meetingCycle: string;
 };
+type ProfileMessage = { type: "success" | "error"; text: string } | null;
 
 function normalizeTag(tag: string) {
   return tag.startsWith("#") ? tag : `#${tag}`;
@@ -195,6 +197,31 @@ function getStudyApiErrorMessage(error: unknown, fallback: string) {
   if (status >= 500) return "서버에서 스터디 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 
   return fallback;
+}
+
+function getProfileApiErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") return fallback;
+
+  const response = (error as { response?: { status?: number; data?: unknown } }).response;
+  if (!response) return "서버에 연결할 수 없습니다.";
+
+  const data = response.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  if (response.status === 401 || response.status === 403) return "로그인 후 프로필을 확인할 수 있습니다.";
+  if (response.status === 404) return "프로필 정보를 찾을 수 없습니다.";
+  if ((response.status ?? 0) >= 500) return "서버에서 프로필 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+  return fallback;
+}
+
+function getApiStatus(error: unknown) {
+  if (!error || typeof error !== "object") return undefined;
+  return (error as { response?: { status?: number } }).response?.status;
 }
 
 export function MainDashboard() {
@@ -467,7 +494,47 @@ export function MyPage() {
   const [interestTags, setInterestTags] = useState<string[]>(profile.interestKeywords);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileName, setProfileName] = useState("박지민 (Jimin Park)");
-  const [profileSchool, setProfileSchool] = useState("Ajou University 3학년");
+  const [profileSchool, setProfileSchool] = useState("Ajou University");
+  const [profileMajor, setProfileMajor] = useState("Software Engineering");
+  const [profileBio, setProfileBio] = useState("함께 꾸준히 성장하는 스터디를 선호합니다.");
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [hasProfile, setHasProfile] = useState(false);
+  const [showProfileSavedToast, setShowProfileSavedToast] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<ProfileMessage>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingProfile(true);
+    setProfileMessage(null);
+
+    profileApi.get()
+      .then((response) => {
+        if (!isMounted) return;
+        setProfileName(response.name);
+        setProfileSchool(response.school);
+        setProfileMajor(response.major);
+        setProfileBio(response.bio);
+        setInterestTags(response.interestTags.map(normalizeTag));
+        setHasProfile(true);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        if (getApiStatus(error) === 404) {
+          setHasProfile(false);
+          setProfileMessage({ type: "error", text: "프로필을 먼저 저장해 주세요." });
+          return;
+        }
+        setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필 정보를 불러오지 못했습니다.") });
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingProfile(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleRemoveInterestTag = (tagToRemove: string) => {
     setInterestTags(interestTags.filter((tag) => tag !== tagToRemove));
@@ -480,8 +547,45 @@ export function MyPage() {
     }
   };
 
+  const handleProfileAction = async () => {
+    if (!isEditingProfile) {
+      setIsEditingProfile(true);
+      setProfileMessage(null);
+      return;
+    }
+
+    if (!profileName.trim()) {
+      setProfileMessage({ type: "error", text: "이름을 입력해 주세요." });
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileMessage(null);
+
+    const payload = {
+      name: profileName.trim(),
+      school: profileSchool.trim(),
+      major: profileMajor.trim(),
+      bio: profileBio.trim(),
+      interestTags: interestTags.map((tag) => tag.replace(/^#/, "")).filter(Boolean),
+    };
+
+    try {
+      await (hasProfile ? profileApi.update(payload) : profileApi.create(payload));
+      setHasProfile(true);
+      setIsEditingProfile(false);
+      setShowProfileSavedToast(true);
+      window.setTimeout(() => setShowProfileSavedToast(false), 2200);
+    } catch (error) {
+      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   return (
     <main className="profile-page content-container">
+      {showProfileSavedToast && <div className="attendance-toast" role="status">프로필이 저장되었습니다.</div>}
       <section className="profile-hero">
         <div className="profile-photo-wrap">
           <Avatar name="user" className="profile-photo" />
@@ -490,24 +594,33 @@ export function MyPage() {
         <div className="profile-copy">
           {isEditingProfile ? (
             <div className="profile-edit-fields">
-              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" />
-              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" />
+              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" placeholder="이름" disabled={isSavingProfile} />
+              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" placeholder="학교" disabled={isSavingProfile} />
+              <input value={profileMajor} onChange={(event) => setProfileMajor(event.target.value)} aria-label="전공 정보" placeholder="전공" disabled={isSavingProfile} />
+              <textarea value={profileBio} onChange={(event) => setProfileBio(event.target.value)} aria-label="자기소개" placeholder="자기소개" disabled={isSavingProfile} />
             </div>
           ) : (
             <div className="profile-text-lines">
               <h1>{profileName}</h1>
-              <p>{profileSchool}</p>
+              <p>{profileSchool}{profileMajor ? ` · ${profileMajor}` : ""}</p>
+              {profileBio && <small>{profileBio}</small>}
             </div>
           )}
         </div>
-        <button className="primary" type="button" onClick={() => setIsEditingProfile(!isEditingProfile)}>
-          {isEditingProfile ? "저장하기" : "프로필 편집"}
+        <button className="primary" type="button" onClick={handleProfileAction} disabled={isLoadingProfile || isSavingProfile}>
+          {isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집"}
         </button>
       </section>
+      {isLoadingProfile && <p className="section-note">프로필 정보를 불러오는 중입니다.</p>}
+      {profileMessage && <p className={`section-note form-${profileMessage.type}`}>{profileMessage.text}</p>}
       <section className="profile-grid">
         <div className="profile-study-section">
           <Panel title="" className="keyword-panel keyword-strip">
-            <TagList tags={interestTags} onRemoveTag={handleRemoveInterestTag} onAddTag={handleAddInterestTag} />
+            <TagList
+              tags={interestTags}
+              onRemoveTag={isEditingProfile ? handleRemoveInterestTag : undefined}
+              onAddTag={isEditingProfile ? handleAddInterestTag : undefined}
+            />
           </Panel>
           <h2>참여 중인 스터디</h2>
           <div className="study-grid profile-study-grid">
