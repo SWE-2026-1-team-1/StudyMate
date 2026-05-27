@@ -18,6 +18,7 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 | 2026-05-20 | AI | 스키마 검증 실패 오류 해결을 위해 study_member.left_reason 컬럼을 VARCHAR(20)로 변경 (D-017). |
 | 2026-05-20 | AI | 스터디 삭제 시 동시성 보장을 위해 비관적 락(Pessimistic Lock) 적용 (D-018). |
 | 2026-05-27 | 채범수 | Sprint 4 (지원/수락 + 팀 운영) 진입. 스코프·기본 정책 묶음 채택 (D-020). 알림(RE-SF3-04) 본 스프린트 제외 (P-009). |
+| 2026-05-27 | AI | 회원탈퇴 후 동일 email 재가입 차단 버그 수정 — 탈퇴 시 email sentinel 치환 + PII 익명화 (D-021). 스키마 변경 없음. |
 
 ---
 
@@ -232,6 +233,30 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
   - MySQL `study_member` 테이블의 `left_reason` 컬럼 타입을 `ENUM('VOLUNTARY','KICKED','STUDY_CLOSED')`에서 `VARCHAR(20)`로 변경한다.
 - 근거: Java `StudyMember` 엔티티 클래스에서 `leftReason` 필드가 `String`(`VARCHAR(20)`)으로 매핑되어 있으나, MySQL 데이터베이스에는 `ENUM` 타입으로 선언되어 있어 Hibernate `ddl-auto: validate` 유효성 검증 시 타입 불일치 에러(`wrong column type encountered`)가 발생함. 이를 일치시키기 위해 데이터베이스 컬럼 타입을 `VARCHAR(20)`로 맞춘다.
 - 후속: `studymate_schema.sql` 수정 완료.
+
+### D-021. 회원탈퇴 시 email sentinel 치환 + PII 익명화 (재가입 허용)
+- 일자: 2026-05-27
+- 범위: `auth.domain.User.delete()` (Java) — **DB 스키마 변경 없음**
+- 결정:
+  - 탈퇴 처리 시 `app_user` row 의 PII 컬럼을 다음과 같이 익명화한다:
+    - `email` → `__deleted_{id}@deleted.local`
+    - `password_hash` → `""` (로그인 영구 차단)
+    - `name` → `"탈퇴한 사용자"`
+    - `school` / `major` / `bio` / `interest_tags` → `NULL`
+    - `is_deleted` → `true`, `updated_at` → now
+  - `app_user.email` 의 UNIQUE 제약은 유지. 탈퇴 row 의 email 이 sentinel 로 치환되므로 원본 email 자리가 비어 동일 email 로 재가입 가능.
+  - 신규 가입은 항상 새 `id` 의 INSERT. 탈퇴 row 와는 별개 인격 — 과거 데이터(스터디·게시글·신청) 신원 분리 유지.
+- 근거:
+  - 기존 구현은 `is_deleted` 플래그만 토글했고, `app_user.email` 의 UNIQUE 제약 때문에 동일 email 재가입 시 `DataIntegrityViolationException` → 409 CONFLICT 가 발생해 재가입 불가.
+  - 실무 표준 패턴 (GitHub `ghost user`, Discord `Deleted User` 등) = soft delete + PII 익명화. 본 결정은 그 정식 적용.
+  - 대안 비교:
+    - UPDATE 재활성(같은 id 복구) — FK 참조 데이터를 새 사용자가 상속하게 되어 신원·감사 무결성 위반. **기각**.
+    - `deleted_email` 보존 컬럼 추가 — 법적 보관 의무 없음 → 컬럼 추가 비용 회피. **기각**.
+    - MySQL generated column + UNIQUE — 변경 폭 크고 디버깅 혼란. **기각**.
+- 후속:
+  - `auth/domain/User.java` `delete(Instant now)` 수정 완료.
+  - 회귀 테스트: `T-SIGN-07` (`AuthSignupIntegrationTest`) — 탈퇴 후 동일 email 재가입 → 201, 신규 id, 기존 탈퇴 row 유지.
+  - 스키마 동기화: **변경 없음** (`studymate_schema.sql` / 운영 MySQL / H2 모두 그대로).
 
 ---
 

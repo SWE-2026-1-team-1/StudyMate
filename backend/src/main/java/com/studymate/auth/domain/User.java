@@ -69,7 +69,16 @@ public class User {
         this.updatedAt = now;
     }
 
+    // - 탈퇴 시 PII 익명화 (개인정보 최소화) + email sentinel 치환 (재가입용 email 자리 해방)
+    // - email UNIQUE 제약 회피: '__deleted_{id}@deleted.local' 로 덮어써 원본 email 자리 비움
     public void delete(Instant now) {
+        this.email = "__deleted_" + this.id + "@deleted.local";
+        this.passwordHash = "";
+        this.name = "탈퇴한 사용자";
+        this.school = null;
+        this.major = null;
+        this.bio = null;
+        this.interestTags = null;
         this.isDeleted = true;
         this.updatedAt = now;
     }

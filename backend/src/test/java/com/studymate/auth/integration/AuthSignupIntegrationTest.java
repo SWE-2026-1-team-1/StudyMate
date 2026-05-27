@@ -93,6 +93,51 @@ class AuthSignupIntegrationTest extends AuthIntegrationTestBase {
         assertThat(errorCode(res)).isEqualTo("EMAIL_NOT_VERIFIED");
     }
 
+    // T-SIGN-07: 탈퇴 후 동일 이메일 재가입 → 201, 신규 active user row 생성
+    // - 회귀: 소프트삭제된 사용자의 이메일은 재사용 가능해야 함
+    // - 실제 플로우 사용: full signup → DELETE /api/profile → re-signup
+    @org.springframework.beans.factory.annotation.Autowired
+    com.studymate.profile.service.ProfileService profileService;
+
+    @Test
+    void T_SIGN_07_탈퇴_후_동일_이메일_재가입() throws Exception {
+        // 1) 기존 사용자: full signup 으로 정상 가입
+        doFullSignup(TEST_EMAIL, TEST_PASSWORD, TEST_NAME);
+        long oldUserId = jdbcTemplate.queryForObject(
+                "SELECT id FROM app_user WHERE email = ?", Long.class, TEST_EMAIL);
+
+        // 2) 탈퇴 (실제 서비스 호출 — email sentinel 치환 / PII 익명화 포함)
+        profileService.deleteProfile(oldUserId);
+
+        // 탈퇴 row 의 email 이 sentinel 로 치환됐는지 확인
+        String oldEmailNow = jdbcTemplate.queryForObject(
+                "SELECT email FROM app_user WHERE id = ?", String.class, oldUserId);
+        assertThat(oldEmailNow).isNotEqualTo(TEST_EMAIL);
+        assertThat(oldEmailNow).startsWith("__deleted_");
+
+        // 3) 동일 이메일로 재가입 (EV 쿨다운 회피 위해 EV 테이블 정리)
+        emailVerificationRepository.deleteAll();
+        fakeEmailSender.clear();
+        sendCode(TEST_EMAIL);
+        String code = fakeEmailSender.lastCode();
+        verifyCode(TEST_EMAIL, code);
+
+        MvcResult res = signup(TEST_EMAIL, TEST_PASSWORD, TEST_NAME);
+        assertThat(res.getResponse().getStatus()).isEqualTo(201);
+
+        // 신규 active user row 가 별도 id 로 생성
+        Long newUserId = jdbcTemplate.queryForObject(
+                "SELECT id FROM app_user WHERE email = ? AND is_deleted = false",
+                Long.class, TEST_EMAIL);
+        assertThat(newUserId).isNotEqualTo(oldUserId);
+
+        // 기존 탈퇴 row 유지 (감사 로그 보존)
+        Long deletedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM app_user WHERE id = ? AND is_deleted = true",
+                Long.class, oldUserId);
+        assertThat(deletedCount).isEqualTo(1L);
+    }
+
     // T-SIGN-06: EV OK + 동일 이메일 user 존재 → 409 CONFLICT, EV consumedAt != null (소비 확정)
     @Test
     void T_SIGN_06() throws Exception {
