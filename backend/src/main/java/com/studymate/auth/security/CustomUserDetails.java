@@ -19,6 +19,12 @@ public class CustomUserDetails implements UserDetails {
         this.passwordHash = user.getPasswordHash();
     }
 
+    public CustomUserDetails(long userId, String email) {
+        this.userId = userId;
+        this.email = email;
+        this.passwordHash = "";
+    }
+
     public long getUserId() { return userId; }
 
     @Override public String getUsername()    { return email; }

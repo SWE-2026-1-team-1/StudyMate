@@ -14,15 +14,21 @@ export const publicApiClient = axios.create({
   },
 });
 
-function isAuthEndpoint(url = "") {
-  return url.startsWith("/api/auth/");
+function isPublicAuthEndpoint(url = "") {
+  return [
+    "/api/auth/signup",
+    "/api/auth/login",
+    "/api/auth/email/send-code",
+    "/api/auth/email/verify",
+    "/api/auth/token/refresh",
+  ].some((endpoint) => url.startsWith(endpoint));
 }
 
 // Request Interceptor: Attach Access Token
 apiClient.interceptors.request.use(
   (config) => {
     const accessToken = localStorage.getItem("accessToken");
-    if (config.headers && isAuthEndpoint(config.url)) {
+    if (config.headers && isPublicAuthEndpoint(config.url)) {
       delete config.headers.Authorization;
       delete config.headers.authorization;
       return config;
@@ -42,7 +48,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const requestUrl = originalRequest?.url ?? "";
-    const isAuthRequest = isAuthEndpoint(requestUrl);
+    const isAuthRequest = isPublicAuthEndpoint(requestUrl);
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true;

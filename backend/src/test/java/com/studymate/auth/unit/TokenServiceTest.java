@@ -1,6 +1,7 @@
 package com.studymate.auth.unit;
 
 import com.studymate.auth.domain.RefreshToken;
+import com.studymate.auth.domain.User;
 import com.studymate.auth.exception.AuthException;
 import com.studymate.auth.repository.RefreshTokenRepository;
 import com.studymate.auth.repository.UserRepository;
@@ -75,6 +76,32 @@ class TokenServiceTest {
                         .isEqualTo(ErrorCode.INVALID_TOKEN));
 
         verify(refreshTokenRepository).revokeAllByUserId(eq(USER_ID), any());
+    }
+
+    @Test
+    void rotate_issuesNewTokenForActiveUser() {
+        Claims claims = mock(Claims.class);
+        when(claims.getSubject()).thenReturn(String.valueOf(USER_ID));
+        when(jwtTokenProvider.parse(RAW_TOKEN)).thenReturn(claims);
+
+        RefreshToken rt = RefreshToken.create(USER_ID, TOKEN_HASH,
+                Instant.now().plus(14, ChronoUnit.DAYS));
+        ReflectionTestUtils.setField(rt, "id", 10L);
+        when(refreshTokenRepository.findByTokenHash(TOKEN_HASH)).thenReturn(Optional.of(rt));
+        when(refreshTokenRepository.revokeById(eq(10L), any())).thenReturn(1);
+
+        User user = User.create("user@test.com", "hash", "Name");
+        ReflectionTestUtils.setField(user, "id", USER_ID);
+        when(userRepository.findByIdAndIsDeletedFalse(USER_ID)).thenReturn(Optional.of(user));
+        when(jwtTokenProvider.createRefreshToken(USER_ID)).thenReturn("new-refresh");
+        when(jwtTokenProvider.createAccessToken(USER_ID, "user@test.com")).thenReturn("new-access");
+        when(jwtTokenProvider.refreshExpiresAt()).thenReturn(Instant.now().plus(14, ChronoUnit.DAYS));
+
+        TokenService.TokenPair pair = service.rotate(RAW_TOKEN);
+
+        assertThat(pair.accessToken()).isEqualTo("new-access");
+        assertThat(pair.refreshToken()).isEqualTo("new-refresh");
+        verify(userRepository).findByIdAndIsDeletedFalse(USER_ID);
     }
 
     // T-LOGOUT-08: row.userId != principal.userId → INVALID_TOKEN

@@ -491,7 +491,8 @@ export function StudyDetail() {
 
 export function MyPage() {
   const navigate = useNavigate();
-  const [interestTags, setInterestTags] = useState<string[]>(profile.interestKeywords);
+  const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
+  const [interestTags, setInterestTags] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileName, setProfileName] = useState("박지민 (Jimin Park)");
   const [profileSchool, setProfileSchool] = useState("Ajou University");
@@ -606,6 +607,21 @@ export function MyPage() {
               {profileBio && <small>{profileBio}</small>}
             </div>
           )}
+          {(profileMessage || profileError) && (
+            <p className={`profile-feedback ${profileError ? "error" : "success"}`}>
+              {profileError || profileMessage}
+            </p>
+          )}
+        </div>
+        <div className="profile-actions">
+          <button className="primary" type="button" disabled={isLoadingProfile || isSavingProfile || !profileData} onClick={handleEditButton}>
+            {isSavingProfile ? "저장 중" : isEditingProfile ? "저장하기" : "프로필 편집"}
+          </button>
+          {isEditingProfile && (
+            <button className="profile-plain-button" type="button" disabled={isSavingProfile} onClick={handleCancelEdit}>
+              취소
+            </button>
+          )}
         </div>
         <button className="primary" type="button" onClick={handleProfileAction} disabled={isLoadingProfile || isSavingProfile}>
           {isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집"}
@@ -622,6 +638,11 @@ export function MyPage() {
               onAddTag={isEditingProfile ? handleAddInterestTag : undefined}
             />
           </Panel>
+          <div className="profile-danger-row">
+            <button type="button" disabled={isSavingProfile || !profileData} onClick={handleDeleteProfile}>
+              계정 삭제
+            </button>
+          </div>
           <h2>참여 중인 스터디</h2>
           <div className="study-grid profile-study-grid">
             {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => navigate(ROUTE_PATHS.teamBoard())} />)}
