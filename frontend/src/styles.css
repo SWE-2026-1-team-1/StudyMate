@@ -1149,6 +1149,9 @@ input:disabled {
   font-size: calc(15px * var(--ui-scale));
   font-weight: 600;
 }
+.form-error {
+  color: #dc2626;
+}
 .study-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

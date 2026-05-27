@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { authInterestTags, createStudy, profile, studies, studyDetail, topics } from "../data";
+import { createStudy, profile, studies, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
-import { studiesApi, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
+import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
 import type { Study, StudyDetailData } from "../types";
 
 import { allMockStudies } from "../mockStudies";
@@ -19,6 +19,18 @@ const studyListRequest = {
 };
 const studyDetailRequests = new Map<string, Promise<StudyDetailResponse>>();
 const studyShuffleSeed = Math.random().toString(36).slice(2);
+const createStudyDraftKey = "studyMate.createStudyDraft";
+const createStudyPathPrefix = "/studies/new";
+
+type CreateStudyDraft = {
+  title: string;
+  description: string;
+  tags: string[];
+  languages: string;
+  maxMembers: string;
+  durationWeeks: string;
+  meetingCycle: string;
+};
 
 function normalizeTag(tag: string) {
   return tag.startsWith("#") ? tag : `#${tag}`;
@@ -82,6 +94,11 @@ function fetchStudySummaries() {
   return studyListRequest.promise;
 }
 
+export function clearStudyApiCache() {
+  studyListRequest.promise = null;
+  studyDetailRequests.clear();
+}
+
 function fetchStudyDetail(studyId: string) {
   const cachedRequest = studyDetailRequests.get(studyId);
   if (cachedRequest) return cachedRequest;
@@ -109,6 +126,75 @@ function getStableShuffleRank(value: string) {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+function getDefaultCreateStudyDraft(): CreateStudyDraft {
+  return {
+    title: "",
+    description: "",
+    tags: [],
+    languages: "",
+    maxMembers: "4",
+    durationWeeks: "8",
+    meetingCycle: createStudy.schedule[0]?.value ?? "",
+  };
+}
+
+function clearCreateStudyDraft() {
+  sessionStorage.removeItem(createStudyDraftKey);
+}
+
+function isCreateStudyPath(pathname: string) {
+  return pathname === createStudyPathPrefix || pathname.startsWith(`${createStudyPathPrefix}/`);
+}
+
+function readCreateStudyDraft() {
+  const fallback = getDefaultCreateStudyDraft();
+  const rawDraft = sessionStorage.getItem(createStudyDraftKey);
+  if (!rawDraft) return fallback;
+
+  try {
+    const parsedDraft = JSON.parse(rawDraft) as Partial<CreateStudyDraft>;
+    return {
+      ...fallback,
+      ...parsedDraft,
+      tags: Array.isArray(parsedDraft.tags) ? parsedDraft.tags : fallback.tags,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function toCreateStudyRequest(draft: CreateStudyDraft): CreateStudyRequest {
+  return {
+    title: draft.title.trim(),
+    description: draft.description.trim(),
+    tags: draft.tags.map((tag) => tag.replace(/^#/, "")).filter(Boolean),
+    languages: draft.languages.split(",").map((language) => language.trim()).filter(Boolean),
+    maxMembers: Math.max(2, Number.parseInt(draft.maxMembers, 10) || 2),
+    durationWeeks: Math.max(1, Number.parseInt(draft.durationWeeks, 10) || 1),
+    meetingCycle: draft.meetingCycle.trim(),
+  };
+}
+
+function getStudyApiErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") return fallback;
+
+  const response = (error as { response?: { status?: number; data?: unknown } }).response;
+  if (!response) return "서버에 연결할 수 없습니다.";
+
+  const data = response.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  const status = response.status ?? 0;
+  if (status === 401 || status === 403) return "로그인 후 스터디를 생성할 수 있습니다.";
+  if (status >= 500) return "서버에서 스터디 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+  return fallback;
 }
 
 export function MainDashboard() {
@@ -439,9 +525,87 @@ export function MyPage() {
 
 export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const next = step === 1 ? ROUTE_PATHS.createRules : step === 2 ? ROUTE_PATHS.createSchedule : ROUTE_PATHS.home;
   const previous = step === 2 ? ROUTE_PATHS.createBasic : step === 3 ? ROUTE_PATHS.createRules : ROUTE_PATHS.home;
   const title = step === 1 ? "기본 정보를 입력해주세요" : step === 2 ? "규칙 및 태그를 입력해주세요" : "일정 설정";
+  const [draft, setDraft] = useState<CreateStudyDraft>(() => readCreateStudyDraft());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    const handlePageHide = () => clearCreateStudyDraft();
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCreateStudyPath(location.pathname)) {
+      clearCreateStudyDraft();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    return () => {
+      window.setTimeout(() => {
+        if (!isCreateStudyPath(window.location.pathname)) {
+          clearCreateStudyDraft();
+        }
+      }, 0);
+    };
+  }, []);
+
+  const updateDraft = (nextDraft: CreateStudyDraft) => {
+    setDraft(nextDraft);
+    sessionStorage.setItem(createStudyDraftKey, JSON.stringify(nextDraft));
+  };
+
+  const handleCancel = () => {
+    if (step === 1) {
+      clearCreateStudyDraft();
+      navigate(previous);
+      return;
+    }
+
+    navigate(previous);
+  };
+
+  const handleNext = async () => {
+    setSubmitError("");
+
+    if (step !== 3) {
+      navigate(next);
+      return;
+    }
+
+    const payload = toCreateStudyRequest(draft);
+    if (!payload.title || !payload.description || payload.tags.length === 0 || payload.languages.length === 0 || !payload.meetingCycle) {
+      setSubmitError("제목, 소개, 태그, 사용 언어/기술, 모임 주기를 모두 입력해 주세요.");
+      return;
+    }
+
+    if (!localStorage.getItem("accessToken")) {
+      setSubmitError("로그인 후 스터디를 생성할 수 있습니다.");
+      clearCreateStudyDraft();
+      navigate(ROUTE_PATHS.login);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const createdStudy = await studiesApi.create(payload);
+      clearCreateStudyDraft();
+      clearStudyApiCache();
+      navigate(ROUTE_PATHS.studyDetail(String(createdStudy.studyId)));
+    } catch (error) {
+      setSubmitError(getStudyApiErrorMessage(error, "스터디를 생성하지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해 주세요."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <main className="create-page content-container">
@@ -449,15 +613,16 @@ export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
       <Stepper step={step} />
       <section className="create-card">
         <h2>{title}</h2>
-        {step === 1 && <BasicForm />}
-        {step === 2 && <RulesForm />}
-        {step === 3 && <ScheduleForm />}
+        {submitError && <p className="section-note form-error">{submitError}</p>}
+        {step === 1 && <BasicForm draft={draft} onChange={updateDraft} />}
+        {step === 2 && <RulesForm draft={draft} onChange={updateDraft} />}
+        {step === 3 && <ScheduleForm draft={draft} onChange={updateDraft} />}
         <footer className="form-footer">
-          <button className="plain" type="button" onClick={() => navigate(previous)}>
+          <button className="plain" type="button" onClick={handleCancel} disabled={isSubmitting}>
             {step === 1 ? "× 취소하기" : "← 이전으로"}
           </button>
-          <button className="primary" type="button" onClick={() => navigate(next)}>
-            {step === 3 ? "완료" : "다음 단계로 이동"} <span>→</span>
+          <button className="primary" type="button" onClick={handleNext} disabled={isSubmitting}>
+            {step === 3 ? (isSubmitting ? "생성 중..." : "완료") : "다음 단계로 이동"} <span>→</span>
           </button>
         </footer>
       </section>
@@ -478,7 +643,7 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
-function BasicForm() {
+function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
   const defaultCategory = createStudy.categories.find((category) => category.selected)?.label ?? createStudy.categories[0].label;
   const defaultVisibility = createStudy.visibilityOptions.find((option) => option.selected)?.label ?? createStudy.visibilityOptions[0].label;
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
@@ -486,7 +651,12 @@ function BasicForm() {
 
   return (
     <div className="create-fields">
-      <Field label="스터디 제목" placeholder="예: [CS 기초] 기술 면접 대비 올인원 스터디" />
+      <Field
+        label="스터디 제목"
+        placeholder="예: [CS 기초] 기술 면접 대비 올인원 스터디"
+        value={draft.title}
+        onChange={(event) => onChange({ ...draft, title: event.target.value })}
+      />
       <label>
         카테고리 선택
         <div className="category-grid">
@@ -503,9 +673,22 @@ function BasicForm() {
           ))}
         </div>
       </label>
-      <label>스터디 목표 및 소개<textarea placeholder="스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요." /></label>
+      <label>
+        스터디 목표 및 소개
+        <textarea
+          placeholder="스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요."
+          value={draft.description}
+          onChange={(event) => onChange({ ...draft, description: event.target.value })}
+        />
+      </label>
       <div className="split-fields">
-        <Field label="모집 인원" placeholder="4                                   명" />
+        <Field
+          label="모집 인원"
+          placeholder="4"
+          type="number"
+          value={draft.maxMembers}
+          onChange={(event) => onChange({ ...draft, maxMembers: event.target.value })}
+        />
         <label>
           공개 여부
           <div className="visibility-row">
@@ -527,49 +710,55 @@ function BasicForm() {
   );
 }
 
-function RulesForm() {
-  const [tags, setTags] = useState<string[]>(authInterestTags);
-
+function RulesForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
+    onChange({ ...draft, tags: draft.tags.filter((tag) => tag !== tagToRemove) });
   };
 
   const handleAddTag = (newTag: string) => {
     const normalizedTag = newTag.startsWith("#") ? newTag : `#${newTag}`;
-    if (!tags.includes(normalizedTag)) {
-      setTags([...tags, normalizedTag]);
+    if (!draft.tags.includes(normalizedTag)) {
+      onChange({ ...draft, tags: [...draft.tags, normalizedTag] });
     }
   };
 
   return (
     <div className="create-fields">
-      <Field label="규칙 및 태그" placeholder="규칙을 작성해주세요!" />
-      <input placeholder="규칙을 작성해주세요!" />
-      <input placeholder="규칙을 작성해주세요!" />
-      <TagList tags={tags} onRemoveTag={handleRemoveTag} onAddTag={handleAddTag} />
+      <Field
+        label="사용 언어/기술"
+        placeholder="예: JavaScript, React, Spring"
+        value={draft.languages}
+        onChange={(event) => onChange({ ...draft, languages: event.target.value })}
+      />
+      <label>
+        태그
+        <TagList tags={draft.tags} onRemoveTag={handleRemoveTag} onAddTag={handleAddTag} />
+      </label>
     </div>
   );
 }
 
-function ScheduleForm() {
-  const [scheduleFields, setScheduleFields] = useState(() =>
-    createStudy.schedule.reduce<Record<string, string>>((fields, { label, value }) => {
-      fields[label] = value;
-      return fields;
-    }, {})
-  );
-
+function ScheduleForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
   return (
     <div className="schedule-list">
-      {createStudy.schedule.map(({ label }) => (
-        <label key={label}>
-          <b>{label}</b>
-          <input
-            value={scheduleFields[label]}
-            onChange={(event) => setScheduleFields({ ...scheduleFields, [label]: event.target.value })}
-          />
-        </label>
-      ))}
+      <label>
+        <b>모임 주기</b>
+        <input
+          value={draft.meetingCycle}
+          onChange={(event) => onChange({ ...draft, meetingCycle: event.target.value })}
+          placeholder="예: 매주 수요일 16:00"
+        />
+      </label>
+      <label>
+        <b>스터디 기간</b>
+        <input
+          type="number"
+          min="1"
+          value={draft.durationWeeks}
+          onChange={(event) => onChange({ ...draft, durationWeeks: event.target.value })}
+          placeholder="8"
+        />
+      </label>
     </div>
   );
 }

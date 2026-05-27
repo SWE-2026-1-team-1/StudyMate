@@ -1,9 +1,35 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { studiesApi } from "../api/studies";
 import { attendanceDates, attendanceMembers, joinRequests, teamMembers, teamPosts } from "../data";
 import { Avatar } from "../components/Common";
+import { ROUTE_PATHS } from "../routes/routingMap";
+import { clearStudyApiCache } from "./StudyScreens";
 import type { TeamPost } from "../types";
 
+function getTeamStudyApiErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") return fallback;
+
+  const response = (error as { response?: { status?: number; data?: unknown } }).response;
+  if (!response) return "서버에 연결할 수 없습니다.";
+
+  const data = response.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  if (response.status === 401 || response.status === 403) return "스터디를 삭제할 권한이 없습니다.";
+  if (response.status === 404) return "삭제할 스터디를 찾을 수 없습니다.";
+  if ((response.status ?? 0) >= 500) return "서버에서 스터디 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+
+  return fallback;
+}
+
 export function TeamBoard() {
+  const navigate = useNavigate();
+  const { teamId = "python-study" } = useParams();
   const [openPost, setOpenPost] = useState<number | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [postTitle, setPostTitle] = useState("");
@@ -39,7 +65,7 @@ export function TeamBoard() {
       <TeamHeader
         title="Team Board"
         subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요."
-        action={<button className="study-info-button" type="button">스터디 정보 보기</button>}
+        action={<button className="study-info-button" type="button" onClick={() => navigate(ROUTE_PATHS.studyDetail(teamId))}>스터디 정보 보기</button>}
       />
       <button
         className="topic-start"
@@ -147,14 +173,38 @@ export function TeamAttendance() {
 }
 
 export function TeamMembers() {
+  const navigate = useNavigate();
+  const { teamId = "python-study" } = useParams();
+  const [isDeletingStudy, setIsDeletingStudy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDeleteStudy = async () => {
+    if (isDeletingStudy) return;
+    const confirmed = window.confirm("스터디를 삭제하시겠습니까? 삭제 후에는 되돌릴 수 없습니다.");
+    if (!confirmed) return;
+
+    setDeleteError("");
+    setIsDeletingStudy(true);
+    try {
+      await studiesApi.delete(teamId);
+      clearStudyApiCache();
+      navigate(ROUTE_PATHS.studies, { replace: true });
+    } catch (error) {
+      setDeleteError(getTeamStudyApiErrorMessage(error, "스터디를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요."));
+    } finally {
+      setIsDeletingStudy(false);
+    }
+  };
+
   return (
     <div className="members-page">
       <TeamHeader
         title="Member Board"
         subtitle="스터디 팀원을 관리하세요."
         hideCount
-        action={<button className="study-delete-button" type="button">스터디 삭제</button>}
+        action={<button className="study-delete-button" type="button" onClick={handleDeleteStudy} disabled={isDeletingStudy}>{isDeletingStudy ? "삭제 중..." : "스터디 삭제"}</button>}
       />
+      {deleteError && <p className="section-note form-error">{deleteError}</p>}
       <section className="member-table">
         <header><h2>Active Members</h2><span>Total: 3</span></header>
         <div className="member-row head">
