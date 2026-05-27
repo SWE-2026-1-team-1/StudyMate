@@ -306,6 +306,13 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
 - 근거: PR #15에 대한 Copilot pull request reviewer의 지적 사항 반영. 동일 스터디에 대해 수정(PATCH)과 삭제(DELETE) 요청이 동시에 처리될 때, 발생할 수 있는 데이터의 일관성 및 정합성 유실 문제를 방지하기 위함.
 - 영향 파일: `StudyService.java`
 
+### D-019. CI 워크플로 전면 제거 — 배포 파이프라인만 유지
+- 범위: 전체 프로젝트 CI/CD
+- 결정: `backend-ci.yml`, `frontend-ci.yml` 삭제. `backend-deploy.yml`의 test 게이팅 잡도 제거. 빌드(Docker build / npm build)는 배포 파이프라인의 필연적 단계이므로 유지.
+- 근거: 소규모 팀 + 비정형 개발 속도 우선 환경에서 CI는 코드 오염 방지 게이트 역할을 하나, 현재 코드베이스 품질 기준상 테스트 실패가 상시 발생할 수 있어 배포를 차단하는 오버헤드가 더 큼. CI 유지보수 비용 > 효익.
+- 영향 파일: `.github/workflows/backend-ci.yml` (삭제), `.github/workflows/frontend-ci.yml` (삭제), `.github/workflows/backend-deploy.yml` (test 잡 제거)
+- 결정일: 2026-05-27
+
 ---
 
 ## 사용 가이드 (팀원용)
