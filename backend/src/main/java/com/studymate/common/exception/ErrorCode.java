@@ -30,7 +30,8 @@ public enum ErrorCode {
     ALREADY_APPLIED       (HttpStatus.CONFLICT,      "이미 신청한 스터디입니다."),
     ALREADY_MEMBER        (HttpStatus.CONFLICT,      "이미 해당 스터디의 멤버입니다."),
     STUDY_FULL            (HttpStatus.CONFLICT,      "모집이 마감되었거나 정원이 가득 찼습니다."),
-    INVALID_APPLICATION_STATUS(HttpStatus.CONFLICT,  "이미 처리된 신청입니다.");
+    INVALID_APPLICATION_STATUS(HttpStatus.CONFLICT,  "이미 처리된 신청입니다."),
+    CANNOT_REMOVE_LEADER  (HttpStatus.CONFLICT,      "팀장은 강퇴할 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String defaultMessage;
