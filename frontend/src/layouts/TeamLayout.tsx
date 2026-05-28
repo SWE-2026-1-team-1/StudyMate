@@ -3,9 +3,11 @@ import { NavLink, Outlet, useParams } from "react-router-dom";
 import { Frame, TopBar } from "../components/Common";
 import { studiesApi, type StudyDetailResponse } from "../api/studies";
 import { ROUTE_PATHS } from "../routes/routingMap";
+import { useLanguage } from "../i18n";
 
 export function TeamLayout() {
   const { teamId = "python-study" } = useParams();
+  const { translate } = useLanguage();
   const [study, setStudy] = useState<StudyDetailResponse | null>(null);
   const [studyLoadFailed, setStudyLoadFailed] = useState(false);
 
@@ -37,26 +39,26 @@ export function TeamLayout() {
 
   const studyName = study?.title ?? "파이썬 스터디";
   const studyMeta = study
-    ? `${study.status === "OPEN" ? "모집중" : "마감"} · ${study.currentMembers}/${study.maxMembers}명`
-    : studyLoadFailed ? "스터디 정보 없음" : "CS302 PROJECT";
+    ? `${translate(study.status === "OPEN" ? "모집중" : "마감")} · ${study.currentMembers}/${study.maxMembers}${translate("명")}`
+    : studyLoadFailed ? translate("스터디 정보 없음") : "CS302 PROJECT";
 
   return (
     <Frame>
       <TopBar />
       <div className="team-shell">
         <aside className="team-nav">
-          <div className="team-logo"><span className="team-logo-icon" aria-hidden="true" /><b>{studyName}</b><small>{studyMeta}</small></div>
+          <div className="team-logo"><span className="team-logo-icon" aria-hidden="true" /><b>{translate(studyName)}</b><small>{studyMeta}</small></div>
           <NavLink to={ROUTE_PATHS.teamBoard(teamId)}>
             <span className="team-nav-icon team-nav-icon-board" aria-hidden="true" />
-            게시판
+            {translate("게시판")}
           </NavLink>
           <NavLink to={ROUTE_PATHS.teamAttendance(teamId)}>
             <span className="team-nav-icon team-nav-icon-attendance" aria-hidden="true" />
-            출석체크
+            {translate("출석체크")}
           </NavLink>
           <NavLink to={ROUTE_PATHS.teamMembers(teamId)}>
             <span className="team-nav-icon team-nav-icon-member" aria-hidden="true" />
-            팀원관리
+            {translate("팀원관리")}
           </NavLink>
         </aside>
         <main className="team-content content-container">

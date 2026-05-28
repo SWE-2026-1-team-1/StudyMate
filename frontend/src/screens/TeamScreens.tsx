@@ -8,6 +8,7 @@ import { attendanceDates, attendanceMembers, teamPosts } from "../data";
 import { Avatar, Toast } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import { clearStudyApiCache } from "./StudyScreens";
+import { useLanguage } from "../i18n";
 
 function getTeamStudyApiErrorMessage(error: unknown, fallback: string) {
   if (!error || typeof error !== "object") return fallback;
@@ -111,6 +112,7 @@ function mapMockComments(post: (typeof teamPosts)[number]): CommentResponse[] {
 
 export function TeamBoard() {
   const navigate = useNavigate();
+  const { translate } = useLanguage();
   const { teamId = "python-study" } = useParams();
   const toastTimerRef = useRef<number | null>(null);
   const isRealTeam = !Number.isNaN(Number(teamId));
@@ -227,10 +229,10 @@ export function TeamBoard() {
   const handleEditPost = async (post: PostDetailResponse) => {
     if (!isRealTeam || processingPostId) return;
 
-    const title = window.prompt("게시글 제목을 수정해 주세요.", post.title);
+    const title = window.prompt(translate("게시글 제목을 수정해 주세요."), post.title);
     if (title === null) return;
 
-    const content = window.prompt("게시글 내용을 수정해 주세요.", post.content);
+    const content = window.prompt(translate("게시글 내용을 수정해 주세요."), post.content);
     if (content === null) return;
 
     setProcessingPostId(post.postId);
@@ -248,7 +250,7 @@ export function TeamBoard() {
 
   const handleDeletePost = async (postId: number) => {
     if (!isRealTeam || processingPostId) return;
-    if (!window.confirm("게시글을 삭제하시겠습니까?")) return;
+    if (!window.confirm(translate("게시글을 삭제하시겠습니까?"))) return;
 
     setProcessingPostId(postId);
     try {
@@ -288,7 +290,7 @@ export function TeamBoard() {
   const handleEditComment = async (postId: number, comment: CommentResponse) => {
     if (!isRealTeam || processingCommentId) return;
 
-    const content = window.prompt("댓글 내용을 수정해 주세요.", comment.content);
+    const content = window.prompt(translate("댓글 내용을 수정해 주세요."), comment.content);
     if (content === null) return;
 
     setProcessingCommentId(comment.commentId);
@@ -308,7 +310,7 @@ export function TeamBoard() {
 
   const handleDeleteComment = async (postId: number, commentId: number) => {
     if (!isRealTeam || processingCommentId) return;
-    if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
+    if (!window.confirm(translate("댓글을 삭제하시겠습니까?"))) return;
 
     setProcessingCommentId(commentId);
     try {
@@ -327,16 +329,16 @@ export function TeamBoard() {
 
   return (
     <>
-      {toastMessage && <Toast type={toastMessage.type}>{toastMessage.text}</Toast>}
+      {toastMessage && <Toast type={toastMessage.type}>{translate(toastMessage.text)}</Toast>}
       <TeamHeader
         title="Team Board"
         subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요."
-        action={<button className="study-info-button" type="button" onClick={() => navigate(ROUTE_PATHS.studyDetail(teamId))}>스터디 정보 보기</button>}
+        action={<button className="study-info-button" type="button" onClick={() => navigate(ROUTE_PATHS.studyDetail(teamId))}>{translate("스터디 정보 보기")}</button>}
       />
       <button
         className="topic-start"
         type="button"
-        aria-label="게시글 작성"
+        aria-label={translate("게시글 작성")}
         aria-expanded={isComposing}
         onClick={() => setIsComposing((current) => !current)}
       >
@@ -348,29 +350,29 @@ export function TeamBoard() {
           <div className="post-compose-fields">
             <input
               type="text"
-              placeholder="제목을 입력하세요"
-              aria-label="게시글 제목"
+              placeholder={translate("제목을 입력하세요")}
+              aria-label={translate("게시글 제목")}
               value={postTitle}
               onChange={(event) => setPostTitle(event.target.value)}
             />
             <textarea
-              placeholder="새로운 소식을 공유해보세요..."
-              aria-label="게시글 내용"
+              placeholder={translate("새로운 소식을 공유해보세요...")}
+              aria-label={translate("게시글 내용")}
               value={postBody}
               onChange={(event) => setPostBody(event.target.value)}
             />
-            <select aria-label="게시글 유형" value={postType} onChange={(event) => setPostType(event.target.value as PostType)}>
-              <option value="NOTICE">공지</option>
-              <option value="FREE">자유</option>
+            <select aria-label={translate("게시글 유형")} value={postType} onChange={(event) => setPostType(event.target.value as PostType)}>
+              <option value="NOTICE">{translate("공지")}</option>
+              <option value="FREE">{translate("자유")}</option>
             </select>
           </div>
           <button className="post-submit" type="submit" disabled={isSubmittingPost}>{isSubmittingPost ? "..." : "Post"}</button>
         </form>
       )}
       <section className="post-list">
-        {isLoadingPosts && <p className="section-note">게시글을 불러오는 중입니다.</p>}
-        {postError && <p className="section-note form-error">{postError}</p>}
-        {!isLoadingPosts && !postError && posts.length === 0 && <p className="section-note">아직 게시글이 없습니다.</p>}
+        {isLoadingPosts && <p className="section-note">{translate("게시글을 불러오는 중입니다.")}</p>}
+        {postError && <p className="section-note form-error">{translate(postError)}</p>}
+        {!isLoadingPosts && !postError && posts.length === 0 && <p className="section-note">{translate("아직 게시글이 없습니다.")}</p>}
         {posts.map((post) => (
           <Post
             key={post.postId}
@@ -394,6 +396,7 @@ export function TeamBoard() {
 
 export function TeamAttendance() {
   const { teamId = "python-study" } = useParams();
+  const { translate } = useLanguage();
   const attendanceStorageKey = `studyMate.attendance.${teamId}`;
   const [rows, setRows] = useState(() => {
     const storedRows = sessionStorage.getItem(attendanceStorageKey);
@@ -438,25 +441,25 @@ export function TeamAttendance() {
 
   return (
     <>
-      {showSavedToast && <div className="attendance-toast" role="status">출석정보 저장되었습니다.</div>}
+      {showSavedToast && <div className="attendance-toast" role="status">{translate("출석정보 저장되었습니다.")}</div>}
       <TeamHeader
         title="Attendance Board"
         subtitle="팀원 출석체크를 관리하세요."
-        action={<button className="attendance-confirm" type="button" aria-label="출석 저장" onClick={handleSaveAttendance} />}
+        action={<button className="attendance-confirm" type="button" aria-label={translate("출석 저장")} onClick={handleSaveAttendance} />}
       />
       <section className="attendance-card">
         <div className="attendance-row head">
-          <strong>Member Name</strong>
-          {attendanceDates.map((date) => <strong key={date}>{date}</strong>)}
+          <strong>{translate("Member Name")}</strong>
+          {attendanceDates.map((date) => <strong key={date}>{translate(date)}</strong>)}
         </div>
         {rows.map(({ name, avatar, checks }, memberIndex) => (
           <div className="attendance-row" key={name}>
-            <span>{avatar ? <Avatar name={avatar} /> : <i className="initial-avatar">{name.slice(0, 2)}</i>}{name}</span>
+            <span>{avatar ? <Avatar name={avatar} /> : <i className="initial-avatar">{translate(name).slice(0, 2)}</i>}{translate(name)}</span>
             {checks.map((state, index) => (
               <button
                 className={`attendance-state ${state}`}
                 type="button"
-                aria-label={`${name} ${attendanceDates[index]} 출석 상태 ${state}`}
+                aria-label={`${translate(name)} ${translate(attendanceDates[index])} ${translate("출석 상태")} ${translate(state)}`}
                 disabled={index !== latestDateIndex}
                 key={`${name}-${index}`}
                 onClick={() => toggleAttendance(memberIndex, index)}
@@ -464,7 +467,7 @@ export function TeamAttendance() {
             ))}
           </div>
         ))}
-        <footer><span className="present">Present</span><span className="absent">Absent</span><span className="scheduled">Scheduled</span></footer>
+        <footer><span className="present">{translate("Present")}</span><span className="absent">{translate("Absent")}</span><span className="scheduled">{translate("Scheduled")}</span></footer>
       </section>
     </>
   );
@@ -472,6 +475,7 @@ export function TeamAttendance() {
 
 export function TeamMembers() {
   const navigate = useNavigate();
+  const { translate } = useLanguage();
   const { teamId = "python-study" } = useParams();
   const toastTimerRef = useRef<number | null>(null);
   const isRealTeam = !Number.isNaN(Number(teamId));
@@ -560,7 +564,7 @@ export function TeamMembers() {
 
   const handleDeleteStudy = async () => {
     if (isDeletingStudy) return;
-    const confirmed = window.confirm("스터디를 삭제하시겠습니까? 삭제 후에는 되돌릴 수 없습니다.");
+    const confirmed = window.confirm(translate("스터디를 삭제하시겠습니까? 삭제 후에는 되돌릴 수 없습니다."));
     if (!confirmed) return;
 
     setIsDeletingStudy(true);
@@ -594,14 +598,14 @@ export function TeamMembers() {
   const handleRejectApplication = async (applicationId: number) => {
     if (!isRealTeam || processingApplicationId) return;
 
-    const rejectReason = window.prompt("거절 사유를 입력해 주세요.", "조건이 맞지 않아 거절합니다.");
+    const rejectReason = window.prompt(translate("거절 사유를 입력해 주세요."), translate("조건이 맞지 않아 거절합니다."));
     if (rejectReason === null) return;
 
     setApplicationError("");
     setProcessingApplicationId(applicationId);
     try {
       await applicationsApi.rejectTeamApplication(teamId, applicationId, {
-        rejectReason: rejectReason.trim() || "조건이 맞지 않아 거절합니다.",
+        rejectReason: rejectReason.trim() || translate("조건이 맞지 않아 거절합니다."),
       });
       setJoinApplications((current) => current.filter((application) => application.applicationId !== applicationId));
       showToast({ type: "success", text: "가입 요청을 거절했습니다." });
@@ -615,7 +619,7 @@ export function TeamMembers() {
   const handleKickMember = async (member: TeamMemberResponse) => {
     if (!isRealTeam || processingMemberId) return;
 
-    const confirmed = window.confirm(`${member.userName}님을 팀에서 내보내시겠습니까?`);
+    const confirmed = window.confirm(translate("팀에서 내보내시겠습니까?").replace("{name}", member.userName));
     if (!confirmed) return;
 
     setProcessingMemberId(member.memberId);
@@ -633,7 +637,7 @@ export function TeamMembers() {
   const handleLeaveTeam = async () => {
     if (!isRealTeam || processingMemberId) return;
 
-    const confirmed = window.confirm("이 팀에서 나가시겠습니까?");
+    const confirmed = window.confirm(translate("이 팀에서 나가시겠습니까?"));
     if (!confirmed) return;
 
     setProcessingMemberId("me");
@@ -651,7 +655,7 @@ export function TeamMembers() {
 
   return (
     <div className="members-page">
-      {toastMessage && <Toast type={toastMessage.type}>{toastMessage.text}</Toast>}
+      {toastMessage && <Toast type={toastMessage.type}>{translate(toastMessage.text)}</Toast>}
       <TeamHeader
         title="Member Board"
         subtitle="스터디 팀원을 관리하세요."
@@ -660,62 +664,62 @@ export function TeamMembers() {
           <div className="member-header-actions">
             {currentMember && !isCurrentUserLeader && (
               <button className="team-leave-button" type="button" onClick={handleLeaveTeam} disabled={!isRealTeam || processingMemberId === "me"}>
-                {processingMemberId === "me" ? "나가는 중..." : "팀 나가기"}
+                {translate(processingMemberId === "me" ? "나가는 중..." : "팀 나가기")}
               </button>
             )}
-            <button className="study-delete-button" type="button" onClick={handleDeleteStudy} disabled={isDeletingStudy}>{isDeletingStudy ? "삭제 중..." : "스터디 삭제"}</button>
+            <button className="study-delete-button" type="button" onClick={handleDeleteStudy} disabled={isDeletingStudy}>{translate(isDeletingStudy ? "삭제 중..." : "스터디 삭제")}</button>
           </div>
         )}
       />
       <section className="member-table">
-        <header><h2>Active Members</h2><span>Total: {members.length}</span></header>
+        <header><h2>{translate("Active Members")}</h2><span>{translate("Total")}: {members.length}</span></header>
         <div className="member-row head">
-          <strong>NAME</strong>
-          <strong>ROLE</strong>
-          <strong>JOINED</strong>
+          <strong>{translate("NAME")}</strong>
+          <strong>{translate("ROLE")}</strong>
+          <strong>{translate("JOINED")}</strong>
           <strong />
         </div>
-        {isLoadingMembers && <p className="section-note">팀원 목록을 불러오는 중입니다.</p>}
-        {memberError && <p className="section-note form-error">{memberError}</p>}
+        {isLoadingMembers && <p className="section-note">{translate("팀원 목록을 불러오는 중입니다.")}</p>}
+        {memberError && <p className="section-note form-error">{translate(memberError)}</p>}
         {!isLoadingMembers && !memberError && members.length === 0 && (
-          <p className="section-note">표시할 팀원이 없습니다.</p>
+          <p className="section-note">{translate("표시할 팀원이 없습니다.")}</p>
         )}
         {members.map((member) => (
           <div className="member-row" key={member.memberId}>
             <span><i className="initial-avatar">{getInitials(member.userName)}</i>{member.userName}</span>
-            <span><em className={`role-${member.roleCode.toLowerCase()}`}>{member.roleCode}</em></span>
+            <span><em className={`role-${member.roleCode.toLowerCase()}`}>{translate(member.roleCode)}</em></span>
             <span className="member-joined-at">{formatMemberJoinedAt(member.joinedAt)}</span>
             {member.roleCode.toUpperCase() === "LEADER" || member.userId === currentUserId ? (
               <span aria-hidden="true" />
             ) : (
               <button type="button" onClick={() => handleKickMember(member)} disabled={processingMemberId === member.memberId}>
-                {processingMemberId === member.memberId ? "..." : "kick"}
+                {processingMemberId === member.memberId ? "..." : translate("kick")}
               </button>
             )}
           </div>
         ))}
       </section>
       <section className="member-table request-table">
-        <header><h2>Join Requests</h2></header>
-        {isLoadingApplications && <p className="section-note">가입 요청을 불러오는 중입니다.</p>}
-        {applicationError && <p className="section-note form-error">{applicationError}</p>}
+        <header><h2>{translate("Join Requests")}</h2></header>
+        {isLoadingApplications && <p className="section-note">{translate("가입 요청을 불러오는 중입니다.")}</p>}
+        {applicationError && <p className="section-note form-error">{translate(applicationError)}</p>}
         {!isLoadingApplications && !applicationError && joinApplications.length === 0 && (
-          <p className="section-note">대기 중인 가입 요청이 없습니다.</p>
+          <p className="section-note">{translate("대기 중인 가입 요청이 없습니다.")}</p>
         )}
         {joinApplications.map(({ applicationId, applicantName, message, appliedAt }) => (
           <div className="request-row" key={applicationId}>
             <span><i className="initial-avatar">{getInitials(applicantName)}</i><b>{applicantName}</b><small>{message || formatJoinRequestDate(appliedAt)}</small></span>
             <div>
               <button className="primary" type="button" onClick={() => handleApproveApplication(applicationId)} disabled={processingApplicationId === applicationId}>
-                {processingApplicationId === applicationId ? "..." : "Accept"}
+                {processingApplicationId === applicationId ? "..." : translate("Accept")}
               </button>
               <button type="button" onClick={() => handleRejectApplication(applicationId)} disabled={processingApplicationId === applicationId}>
-                Reject
+                {translate("Reject")}
               </button>
             </div>
           </div>
         ))}
-        <button className="invite-link" type="button">초대 링크</button>
+        <button className="invite-link" type="button">{translate("초대 링크")}</button>
       </section>
     </div>
   );
@@ -732,10 +736,12 @@ function TeamHeader({
   hideCount?: boolean;
   action?: ReactNode;
 }) {
+  const { translate } = useLanguage();
+
   return (
     <header className="team-header">
-      <div><h1>{title}</h1><p>{subtitle}</p></div>
-      {action ?? (!hideCount && <span className="active-count"><i />7 Active</span>)}
+      <div><h1>{translate(title)}</h1><p>{translate(subtitle)}</p></div>
+      {action ?? (!hideCount && <span className="active-count"><i />{translate("7 Active")}</span>)}
     </header>
   );
 }
@@ -765,6 +771,7 @@ function Post({
   onEditComment: (comment: CommentResponse) => void;
   onDeleteComment: (commentId: number) => void;
 }) {
+  const { translate } = useLanguage();
   const { title, content, type, authorName, createdAt } = post;
   const [draft, setDraft] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -786,49 +793,49 @@ function Post({
   return (
     <article className={`post-card${isOpen ? " is-open" : ""}`}>
       <header>
-        <div><span className={`post-tag post-tag-${type.toLowerCase()}`}>{type}</span><h2>{title}</h2></div>
+        <div><span className={`post-tag post-tag-${type.toLowerCase()}`}>{translate(type)}</span><h2>{translate(title)}</h2></div>
         <div className="post-actions">
-          <button type="button" onClick={onEdit} disabled={isProcessingPost}>수정</button>
-          <button type="button" onClick={onDelete} disabled={isProcessingPost}>삭제</button>
+          <button type="button" onClick={onEdit} disabled={isProcessingPost}>{translate("수정")}</button>
+          <button type="button" onClick={onDelete} disabled={isProcessingPost}>{translate("삭제")}</button>
         </div>
       </header>
-      <p>{content}</p>
+      <p>{translate(content)}</p>
       <footer>
         <button className="comment-toggle" type="button" onClick={onToggle} aria-expanded={isOpen}>
           <span aria-hidden="true" />
           {comments.length}
         </button>
         <time>{formatPostDate(createdAt)}</time>
-        <strong>{authorName}</strong>
+        <strong>{translate(authorName)}</strong>
       </footer>
       {isOpen && (
-        <section className="comment-panel" aria-label="댓글">
-          {comments.length === 0 && <p className="section-note">아직 댓글이 없습니다.</p>}
+        <section className="comment-panel" aria-label={translate("댓글")}>
+          {comments.length === 0 && <p className="section-note">{translate("아직 댓글이 없습니다.")}</p>}
           {comments.map((comment) => (
             <article className="comment-item" key={comment.commentId}>
               <Avatar name={comment.authorName} />
               <div>
                 <header>
-                  <strong>{comment.authorName}</strong>
+                  <strong>{translate(comment.authorName)}</strong>
                   <time>{formatPostDate(comment.createdAt)}</time>
                   <span className="comment-actions">
-                    <button type="button" onClick={() => onEditComment(comment)} disabled={processingCommentId === comment.commentId}>수정</button>
-                    <button type="button" onClick={() => onDeleteComment(comment.commentId)} disabled={processingCommentId === comment.commentId}>삭제</button>
+                    <button type="button" onClick={() => onEditComment(comment)} disabled={processingCommentId === comment.commentId}>{translate("수정")}</button>
+                    <button type="button" onClick={() => onDeleteComment(comment.commentId)} disabled={processingCommentId === comment.commentId}>{translate("삭제")}</button>
                   </span>
                 </header>
-                <p>{comment.content}</p>
+                <p>{translate(comment.content)}</p>
               </div>
             </article>
           ))}
           <form className="comment-form" onSubmit={handleCommentSubmit}>
             <input
               type="text"
-              placeholder="Write a comment..."
-              aria-label="댓글 입력"
+              placeholder={translate("Write a comment...")}
+              aria-label={translate("댓글 입력")}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
             />
-            <button type="submit" aria-label="댓글 전송" disabled={isSubmittingComment} />
+            <button type="submit" aria-label={translate("댓글 전송")} disabled={isSubmittingComment} />
           </form>
         </section>
       )}
