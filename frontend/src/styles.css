@@ -2899,6 +2899,24 @@ input:disabled {
   font-size: calc(17px * var(--ui-scale));
   font-weight: 500;
 }
+.member-header-actions {
+  display: flex;
+  gap: calc(12px * var(--ui-scale));
+  align-items: center;
+}
+.team-leave-button {
+  min-width: calc(130px * var(--ui-scale));
+  height: calc(62px * var(--ui-scale));
+  border: 0;
+  border-radius: calc(24px * var(--ui-scale));
+  background: #e8eef6;
+  color: #566277;
+  font-size: calc(17px * var(--ui-scale));
+  font-weight: 700;
+}
+.team-leave-button:disabled {
+  opacity: 0.62;
+}
 .member-table header {
   display: flex;
   align-items: center;
@@ -2946,6 +2964,10 @@ input:disabled {
   width: calc(42px * var(--ui-scale));
   height: calc(42px * var(--ui-scale));
 }
+.member-row .initial-avatar {
+  width: calc(42px * var(--ui-scale));
+  height: calc(42px * var(--ui-scale));
+}
 .member-row em {
   border-radius: calc(999px * var(--ui-scale));
   padding: calc(6px * var(--ui-scale)) calc(14px * var(--ui-scale));
@@ -2983,6 +3005,11 @@ input:disabled {
   border-radius: inherit;
   background: #13b981;
 }
+.member-joined-at {
+  color: #555b64;
+  font-size: calc(16px * var(--ui-scale));
+  font-weight: 700;
+}
 .member-row button {
   justify-self: center;
   min-width: calc(90px * var(--ui-scale));
@@ -2993,6 +3020,9 @@ input:disabled {
   color: #555b64;
   font-size: calc(14px * var(--ui-scale));
   font-weight: 700;
+}
+.member-table > .section-note {
+  padding: calc(24px * var(--ui-scale)) calc(32px * var(--ui-scale));
 }
 .request-table {
   margin-top: calc(42px * var(--ui-scale));

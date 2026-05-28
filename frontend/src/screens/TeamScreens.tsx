@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { useNavigate, useParams } from "react-router-dom";
 import { applicationsApi, type TeamApplicationResponse } from "../api/applications";
 import { studiesApi } from "../api/studies";
-import { attendanceDates, attendanceMembers, teamMembers, teamPosts } from "../data";
+import { teamMembersApi, type TeamMemberResponse } from "../api/teamMembers";
+import { attendanceDates, attendanceMembers, teamPosts } from "../data";
 import { Avatar, Toast } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import { clearStudyApiCache } from "./StudyScreens";
@@ -37,6 +38,21 @@ function formatJoinRequestDate(value: string) {
 
 function getInitials(name: string) {
   return name.trim().slice(0, 2) || "??";
+}
+
+function formatMemberJoinedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getStoredUserId() {
+  const userId = localStorage.getItem("userId");
+  if (!userId) return null;
+
+  const parsedUserId = Number(userId);
+  return Number.isNaN(parsedUserId) ? null : parsedUserId;
 }
 
 export function TeamBoard() {
@@ -124,14 +140,27 @@ export function TeamBoard() {
 }
 
 export function TeamAttendance() {
-  const [rows, setRows] = useState(attendanceMembers);
+  const { teamId = "python-study" } = useParams();
+  const attendanceStorageKey = `studyMate.attendance.${teamId}`;
+  const [rows, setRows] = useState(() => {
+    const storedRows = sessionStorage.getItem(attendanceStorageKey);
+    if (!storedRows) return attendanceMembers;
+
+    try {
+      const parsedRows = JSON.parse(storedRows);
+      return Array.isArray(parsedRows) ? parsedRows as typeof attendanceMembers : attendanceMembers;
+    } catch {
+      return attendanceMembers;
+    }
+  });
   const [showSavedToast, setShowSavedToast] = useState(false);
   const latestDateIndex = attendanceDates.length - 1;
 
   const toggleAttendance = (memberIndex: number, checkIndex: number) => {
     if (checkIndex !== latestDateIndex) return;
 
-    setRows((current) => current.map((member, index) => {
+    setRows((current) => {
+      const nextRows = current.map((member, index) => {
       if (index !== memberIndex) return member;
 
       const checks = member.checks.map((state, stateIndex) => {
@@ -142,7 +171,11 @@ export function TeamAttendance() {
       });
 
       return { ...member, checks };
-    }));
+      });
+
+      sessionStorage.setItem(attendanceStorageKey, JSON.stringify(nextRows));
+      return nextRows;
+    });
   };
 
   const handleSaveAttendance = () => {
@@ -189,7 +222,12 @@ export function TeamMembers() {
   const { teamId = "python-study" } = useParams();
   const toastTimerRef = useRef<number | null>(null);
   const isRealTeam = !Number.isNaN(Number(teamId));
+  const currentUserId = getStoredUserId();
   const [isDeletingStudy, setIsDeletingStudy] = useState(false);
+  const [members, setMembers] = useState<TeamMemberResponse[]>([]);
+  const [isLoadingMembers, setIsLoadingMembers] = useState(isRealTeam);
+  const [memberError, setMemberError] = useState("");
+  const [processingMemberId, setProcessingMemberId] = useState<number | "me" | null>(null);
   const [joinApplications, setJoinApplications] = useState<TeamApplicationResponse[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(isRealTeam);
   const [applicationError, setApplicationError] = useState("");
@@ -201,6 +239,40 @@ export function TeamMembers() {
     setToastMessage(message);
     toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2200);
   };
+
+  const currentMember = members.find((member) => member.userId === currentUserId);
+  const isCurrentUserLeader = currentMember?.roleCode.toUpperCase() === "LEADER";
+
+  useEffect(() => {
+    if (!isRealTeam) {
+      setMembers([]);
+      setIsLoadingMembers(false);
+      setMemberError("샘플 팀에서는 팀원 목록을 불러올 수 없습니다.");
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingMembers(true);
+    setMemberError("");
+
+    teamMembersApi.list(teamId)
+      .then((response) => {
+        if (!isMounted) return;
+        setMembers(response.members);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setMembers([]);
+        setMemberError(getTeamStudyApiErrorMessage(error, "팀원 목록을 불러오지 못했습니다."));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingMembers(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isRealTeam, teamId]);
 
   useEffect(() => {
     if (!isRealTeam) {
@@ -287,6 +359,43 @@ export function TeamMembers() {
     }
   };
 
+  const handleKickMember = async (member: TeamMemberResponse) => {
+    if (!isRealTeam || processingMemberId) return;
+
+    const confirmed = window.confirm(`${member.userName}님을 팀에서 내보내시겠습니까?`);
+    if (!confirmed) return;
+
+    setProcessingMemberId(member.memberId);
+    try {
+      await teamMembersApi.kick(teamId, member.memberId);
+      setMembers((current) => current.filter((item) => item.memberId !== member.memberId));
+      showToast({ type: "success", text: "팀원을 내보냈습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getTeamStudyApiErrorMessage(error, "팀원을 내보내지 못했습니다.") });
+    } finally {
+      setProcessingMemberId(null);
+    }
+  };
+
+  const handleLeaveTeam = async () => {
+    if (!isRealTeam || processingMemberId) return;
+
+    const confirmed = window.confirm("이 팀에서 나가시겠습니까?");
+    if (!confirmed) return;
+
+    setProcessingMemberId("me");
+    try {
+      await teamMembersApi.leave(teamId);
+      clearStudyApiCache();
+      showToast({ type: "success", text: "팀에서 나갔습니다." });
+      navigate(ROUTE_PATHS.studies, { replace: true });
+    } catch (error) {
+      showToast({ type: "error", text: getTeamStudyApiErrorMessage(error, "팀에서 나가지 못했습니다.") });
+    } finally {
+      setProcessingMemberId(null);
+    }
+  };
+
   return (
     <div className="members-page">
       {toastMessage && <Toast type={toastMessage.type}>{toastMessage.text}</Toast>}
@@ -294,22 +403,42 @@ export function TeamMembers() {
         title="Member Board"
         subtitle="스터디 팀원을 관리하세요."
         hideCount
-        action={<button className="study-delete-button" type="button" onClick={handleDeleteStudy} disabled={isDeletingStudy}>{isDeletingStudy ? "삭제 중..." : "스터디 삭제"}</button>}
+        action={(
+          <div className="member-header-actions">
+            {currentMember && !isCurrentUserLeader && (
+              <button className="team-leave-button" type="button" onClick={handleLeaveTeam} disabled={!isRealTeam || processingMemberId === "me"}>
+                {processingMemberId === "me" ? "나가는 중..." : "팀 나가기"}
+              </button>
+            )}
+            <button className="study-delete-button" type="button" onClick={handleDeleteStudy} disabled={isDeletingStudy}>{isDeletingStudy ? "삭제 중..." : "스터디 삭제"}</button>
+          </div>
+        )}
       />
       <section className="member-table">
-        <header><h2>Active Members</h2><span>Total: 3</span></header>
+        <header><h2>Active Members</h2><span>Total: {members.length}</span></header>
         <div className="member-row head">
           <strong>NAME</strong>
           <strong>ROLE</strong>
-          <strong>ATTENDANCE RATE</strong>
+          <strong>JOINED</strong>
           <strong />
         </div>
-        {teamMembers.map(({ name, role, rate, avatar }) => (
-          <div className="member-row" key={name}>
-            <span><Avatar name={avatar} />{name}</span>
-            <span><em className={`role-${role.toLowerCase()}`}>{role}</em></span>
-            <span className="rate"><i><b style={{ width: rate }} /></i>{rate}</span>
-            {role === "LEADER" ? <span aria-hidden="true" /> : <button type="button">kick</button>}
+        {isLoadingMembers && <p className="section-note">팀원 목록을 불러오는 중입니다.</p>}
+        {memberError && <p className="section-note form-error">{memberError}</p>}
+        {!isLoadingMembers && !memberError && members.length === 0 && (
+          <p className="section-note">표시할 팀원이 없습니다.</p>
+        )}
+        {members.map((member) => (
+          <div className="member-row" key={member.memberId}>
+            <span><i className="initial-avatar">{getInitials(member.userName)}</i>{member.userName}</span>
+            <span><em className={`role-${member.roleCode.toLowerCase()}`}>{member.roleCode}</em></span>
+            <span className="member-joined-at">{formatMemberJoinedAt(member.joinedAt)}</span>
+            {member.roleCode.toUpperCase() === "LEADER" || member.userId === currentUserId ? (
+              <span aria-hidden="true" />
+            ) : (
+              <button type="button" onClick={() => handleKickMember(member)} disabled={processingMemberId === member.memberId}>
+                {processingMemberId === member.memberId ? "..." : "kick"}
+              </button>
+            )}
           </div>
         ))}
       </section>
