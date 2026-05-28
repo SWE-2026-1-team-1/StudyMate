@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { applicationsApi, type TeamApplicationResponse } from "../api/applications";
+import { postsApi, type CommentResponse, type PostDetailResponse, type PostType } from "../api/posts";
 import { studiesApi } from "../api/studies";
 import { teamMembersApi, type TeamMemberResponse } from "../api/teamMembers";
 import { attendanceDates, attendanceMembers, teamPosts } from "../data";
 import { Avatar, Toast } from "../components/Common";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import { clearStudyApiCache } from "./StudyScreens";
-import type { TeamPost } from "../types";
 
 function getTeamStudyApiErrorMessage(error: unknown, fallback: string) {
   if (!error || typeof error !== "object") return fallback;
@@ -55,41 +55,279 @@ function getStoredUserId() {
   return Number.isNaN(parsedUserId) ? null : parsedUserId;
 }
 
+function formatPostDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${date.getMonth() + 1}.${date.getDate()}`;
+}
+
+function getPostApiErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") return fallback;
+
+  const response = (error as { response?: { status?: number; data?: unknown } }).response;
+  if (!response) return "서버에 연결할 수 없습니다.";
+
+  const data = response.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  if (response.status === 401 || response.status === 403) return "게시판 권한이 없습니다.";
+  if (response.status === 404) return "대상을 찾을 수 없습니다.";
+  if ((response.status ?? 0) >= 500) return "서버에서 게시판 요청 처리 중 오류가 발생했습니다.";
+
+  return fallback;
+}
+
+function getApiStatus(error: unknown) {
+  if (!error || typeof error !== "object") return undefined;
+  return (error as { response?: { status?: number } }).response?.status;
+}
+
+function mapMockPost(post: (typeof teamPosts)[number], index: number): PostDetailResponse {
+  return {
+    postId: -(index + 1),
+    title: post.title,
+    content: post.excerpt,
+    type: post.tag === "NOTICE" ? "NOTICE" : "FREE",
+    authorName: post.author,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function mapMockComments(post: (typeof teamPosts)[number]): CommentResponse[] {
+  return post.replies.map((reply, index) => ({
+    commentId: -(index + 1),
+    content: reply.body,
+    authorName: reply.author,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+}
+
 export function TeamBoard() {
   const navigate = useNavigate();
   const { teamId = "python-study" } = useParams();
+  const toastTimerRef = useRef<number | null>(null);
+  const isRealTeam = !Number.isNaN(Number(teamId));
   const [openPost, setOpenPost] = useState<number | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [postTitle, setPostTitle] = useState("");
   const [postBody, setPostBody] = useState("");
-  const [localPosts, setLocalPosts] = useState<TeamPost[]>([]);
-  const visiblePosts = [...localPosts, ...teamPosts];
+  const [postType, setPostType] = useState<PostType>("NOTICE");
+  const [posts, setPosts] = useState<PostDetailResponse[]>([]);
+  const [commentsByPostId, setCommentsByPostId] = useState<Record<number, CommentResponse[]>>({});
+  const [isLoadingPosts, setIsLoadingPosts] = useState(isRealTeam);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+  const [postError, setPostError] = useState("");
+  const [processingPostId, setProcessingPostId] = useState<number | null>(null);
+  const [processingCommentId, setProcessingCommentId] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handlePostSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const showToast = (message: { type: "success" | "error"; text: string }) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2200);
+  };
+
+  useEffect(() => {
+    if (!isRealTeam) {
+      setPosts(teamPosts.map(mapMockPost));
+      setCommentsByPostId(Object.fromEntries(teamPosts.map((post, index) => [-(index + 1), mapMockComments(post)])));
+      setIsLoadingPosts(false);
+      setPostError("");
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingPosts(true);
+    setPostError("");
+
+    postsApi.list(teamId)
+      .then(async (response) => {
+        const details = await Promise.all(response.posts.map((post) => postsApi.get(teamId, post.postId)));
+        if (!isMounted) return;
+        setPosts(details);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        const status = getApiStatus(error);
+        if (status === 401 || status === 403) {
+          showToast({ type: "error", text: "팀 보드 접근 권한이 없습니다." });
+          window.setTimeout(() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+              return;
+            }
+
+            navigate(ROUTE_PATHS.studies, { replace: true });
+          }, 900);
+          return;
+        }
+
+        setPosts([]);
+        setPostError(getPostApiErrorMessage(error, "게시글 목록을 불러오지 못했습니다."));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingPosts(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isRealTeam, teamId]);
+
+  const handlePostSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const title = postTitle.trim();
-    const excerpt = postBody.trim();
-    if (!title || !excerpt) return;
+    const content = postBody.trim();
+    if (!title || !content) return;
 
-    setLocalPosts((current) => [
-      {
-        tag: "NOTICE",
-        title,
-        excerpt,
-        replies: [],
-        author: "나",
-        avatar: "user",
-      },
-      ...current,
-    ]);
-    setPostTitle("");
-    setPostBody("");
-    setIsComposing(false);
-    setOpenPost(null);
+    if (!isRealTeam) {
+      showToast({ type: "error", text: "샘플 팀에서는 게시글을 저장할 수 없습니다." });
+      return;
+    }
+
+    setIsSubmittingPost(true);
+    try {
+      const createdPost = await postsApi.create(teamId, { title, content, type: postType });
+      const detail = await postsApi.get(teamId, createdPost.postId);
+      setPosts((current) => [detail, ...current]);
+      setPostTitle("");
+      setPostBody("");
+      setPostType("NOTICE");
+      setIsComposing(false);
+      setOpenPost(null);
+      showToast({ type: "success", text: "게시글을 작성했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "게시글을 작성하지 못했습니다.") });
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
+
+  const handleTogglePost = async (postId: number) => {
+    const nextOpenPost = openPost === postId ? null : postId;
+    setOpenPost(nextOpenPost);
+
+    if (!nextOpenPost || commentsByPostId[postId] || !isRealTeam) return;
+
+    try {
+      const response = await postsApi.listComments(teamId, postId);
+      setCommentsByPostId((current) => ({ ...current, [postId]: response.comments }));
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "댓글을 불러오지 못했습니다.") });
+    }
+  };
+
+  const handleEditPost = async (post: PostDetailResponse) => {
+    if (!isRealTeam || processingPostId) return;
+
+    const title = window.prompt("게시글 제목을 수정해 주세요.", post.title);
+    if (title === null) return;
+
+    const content = window.prompt("게시글 내용을 수정해 주세요.", post.content);
+    if (content === null) return;
+
+    setProcessingPostId(post.postId);
+    try {
+      await postsApi.update(teamId, post.postId, { title: title.trim() || post.title, content: content.trim() || post.content });
+      const detail = await postsApi.get(teamId, post.postId);
+      setPosts((current) => current.map((item) => item.postId === post.postId ? detail : item));
+      showToast({ type: "success", text: "게시글을 수정했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "게시글을 수정하지 못했습니다.") });
+    } finally {
+      setProcessingPostId(null);
+    }
+  };
+
+  const handleDeletePost = async (postId: number) => {
+    if (!isRealTeam || processingPostId) return;
+    if (!window.confirm("게시글을 삭제하시겠습니까?")) return;
+
+    setProcessingPostId(postId);
+    try {
+      await postsApi.delete(teamId, postId);
+      setPosts((current) => current.filter((post) => post.postId !== postId));
+      setCommentsByPostId((current) => {
+        const nextComments = { ...current };
+        delete nextComments[postId];
+        return nextComments;
+      });
+      showToast({ type: "success", text: "게시글을 삭제했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "게시글을 삭제하지 못했습니다.") });
+    } finally {
+      setProcessingPostId(null);
+    }
+  };
+
+  const handleCreateComment = async (postId: number, content: string) => {
+    if (!isRealTeam) {
+      showToast({ type: "error", text: "샘플 팀에서는 댓글을 저장할 수 없습니다." });
+      return;
+    }
+
+    try {
+      const createdComment = await postsApi.createComment(teamId, postId, { content });
+      setCommentsByPostId((current) => ({
+        ...current,
+        [postId]: [...(current[postId] ?? []), createdComment],
+      }));
+      showToast({ type: "success", text: "댓글을 작성했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "댓글을 작성하지 못했습니다.") });
+    }
+  };
+
+  const handleEditComment = async (postId: number, comment: CommentResponse) => {
+    if (!isRealTeam || processingCommentId) return;
+
+    const content = window.prompt("댓글 내용을 수정해 주세요.", comment.content);
+    if (content === null) return;
+
+    setProcessingCommentId(comment.commentId);
+    try {
+      const updatedComment = await postsApi.updateComment(teamId, postId, comment.commentId, { content: content.trim() || comment.content });
+      setCommentsByPostId((current) => ({
+        ...current,
+        [postId]: (current[postId] ?? []).map((item) => item.commentId === comment.commentId ? updatedComment : item),
+      }));
+      showToast({ type: "success", text: "댓글을 수정했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "댓글을 수정하지 못했습니다.") });
+    } finally {
+      setProcessingCommentId(null);
+    }
+  };
+
+  const handleDeleteComment = async (postId: number, commentId: number) => {
+    if (!isRealTeam || processingCommentId) return;
+    if (!window.confirm("댓글을 삭제하시겠습니까?")) return;
+
+    setProcessingCommentId(commentId);
+    try {
+      await postsApi.deleteComment(teamId, postId, commentId);
+      setCommentsByPostId((current) => ({
+        ...current,
+        [postId]: (current[postId] ?? []).filter((comment) => comment.commentId !== commentId),
+      }));
+      showToast({ type: "success", text: "댓글을 삭제했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getPostApiErrorMessage(error, "댓글을 삭제하지 못했습니다.") });
+    } finally {
+      setProcessingCommentId(null);
+    }
   };
 
   return (
     <>
+      {toastMessage && <Toast type={toastMessage.type}>{toastMessage.text}</Toast>}
       <TeamHeader
         title="Team Board"
         subtitle="실시간으로 팀원들과 소통하고 학습 자료를 공유하세요."
@@ -121,17 +359,32 @@ export function TeamBoard() {
               value={postBody}
               onChange={(event) => setPostBody(event.target.value)}
             />
+            <select aria-label="게시글 유형" value={postType} onChange={(event) => setPostType(event.target.value as PostType)}>
+              <option value="NOTICE">공지</option>
+              <option value="FREE">자유</option>
+            </select>
           </div>
-          <button className="post-submit" type="submit">Post</button>
+          <button className="post-submit" type="submit" disabled={isSubmittingPost}>{isSubmittingPost ? "..." : "Post"}</button>
         </form>
       )}
       <section className="post-list">
-        {visiblePosts.map((post, index) => (
+        {isLoadingPosts && <p className="section-note">게시글을 불러오는 중입니다.</p>}
+        {postError && <p className="section-note form-error">{postError}</p>}
+        {!isLoadingPosts && !postError && posts.length === 0 && <p className="section-note">아직 게시글이 없습니다.</p>}
+        {posts.map((post) => (
           <Post
-            key={`${post.author}-${post.title}-${index}`}
+            key={post.postId}
             post={post}
-            isOpen={openPost === index}
-            onToggle={() => setOpenPost(openPost === index ? null : index)}
+            comments={commentsByPostId[post.postId] ?? []}
+            isOpen={openPost === post.postId}
+            isProcessingPost={processingPostId === post.postId}
+            processingCommentId={processingCommentId}
+            onToggle={() => handleTogglePost(post.postId)}
+            onEdit={() => handleEditPost(post)}
+            onDelete={() => handleDeletePost(post.postId)}
+            onCreateComment={(content) => handleCreateComment(post.postId, content)}
+            onEditComment={(comment) => handleEditComment(post.postId, comment)}
+            onDeleteComment={(commentId) => handleDeleteComment(post.postId, commentId)}
           />
         ))}
       </section>
@@ -487,33 +740,75 @@ function TeamHeader({
   );
 }
 
-function Post({ post, isOpen, onToggle }: { post: TeamPost; isOpen: boolean; onToggle: () => void }) {
-  const { tag, title, excerpt, replies, author, avatar } = post;
+function Post({
+  post,
+  comments,
+  isOpen,
+  isProcessingPost,
+  processingCommentId,
+  onToggle,
+  onEdit,
+  onDelete,
+  onCreateComment,
+  onEditComment,
+  onDeleteComment,
+}: {
+  post: PostDetailResponse;
+  comments: CommentResponse[];
+  isOpen: boolean;
+  isProcessingPost: boolean;
+  processingCommentId: number | null;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onCreateComment: (content: string) => Promise<void>;
+  onEditComment: (comment: CommentResponse) => void;
+  onDeleteComment: (commentId: number) => void;
+}) {
+  const { title, content, type, authorName, createdAt } = post;
   const [draft, setDraft] = useState("");
-  const [localReplies, setLocalReplies] = useState<TeamPost["replies"]>([]);
-  const displayedReplies = [...replies, ...localReplies];
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  const handleCommentSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleCommentSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const body = draft.trim();
     if (!body) return;
 
-    setLocalReplies((current) => [...current, { author: "나", avatar: "user", time: "now", body }]);
-    setDraft("");
+    setIsSubmittingComment(true);
+    try {
+      await onCreateComment(body);
+      setDraft("");
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   return (
     <article className={`post-card${isOpen ? " is-open" : ""}`}>
-      <header><div><span className={`post-tag post-tag-${tag.toLowerCase()}`}>{tag}</span><h2>{title}</h2></div></header>
-      <p>{excerpt}</p>
+      <header>
+        <div><span className={`post-tag post-tag-${type.toLowerCase()}`}>{type}</span><h2>{title}</h2></div>
+        <div className="post-actions">
+          <button type="button" onClick={onEdit} disabled={isProcessingPost}>수정</button>
+          <button type="button" onClick={onDelete} disabled={isProcessingPost}>삭제</button>
+        </div>
+      </header>
+      <p>{content}</p>
       {isOpen && (
         <section className="comment-panel" aria-label="댓글">
-          {displayedReplies.map((reply, index) => (
-            <article className="comment-item" key={`${reply.author}-${index}`}>
-              <Avatar name={reply.avatar} />
+          {comments.length === 0 && <p className="section-note">아직 댓글이 없습니다.</p>}
+          {comments.map((comment) => (
+            <article className="comment-item" key={comment.commentId}>
+              <i className="initial-avatar">{getInitials(comment.authorName)}</i>
               <div>
-                <header><strong>{reply.author}</strong><time>{reply.time}</time></header>
-                <p>{reply.body}</p>
+                <header>
+                  <strong>{comment.authorName}</strong>
+                  <time>{formatPostDate(comment.createdAt)}</time>
+                  <span className="comment-actions">
+                    <button type="button" onClick={() => onEditComment(comment)} disabled={processingCommentId === comment.commentId}>수정</button>
+                    <button type="button" onClick={() => onDeleteComment(comment.commentId)} disabled={processingCommentId === comment.commentId}>삭제</button>
+                  </span>
+                </header>
+                <p>{comment.content}</p>
               </div>
             </article>
           ))}
@@ -525,17 +820,18 @@ function Post({ post, isOpen, onToggle }: { post: TeamPost; isOpen: boolean; onT
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
             />
-            <button type="submit" aria-label="댓글 전송" />
+            <button type="submit" aria-label="댓글 전송" disabled={isSubmittingComment} />
           </form>
         </section>
       )}
       <footer>
         <button className="comment-toggle" type="button" onClick={onToggle} aria-expanded={isOpen}>
           <span aria-hidden="true" />
-          {displayedReplies.length}
+          {comments.length}
         </button>
-        <strong>{author}</strong>
-        <Avatar name={avatar} />
+        <time>{formatPostDate(createdAt)}</time>
+        <strong>{authorName}</strong>
+        <i className="initial-avatar">{getInitials(authorName)}</i>
       </footer>
     </article>
   );

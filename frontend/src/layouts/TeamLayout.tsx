@@ -1,16 +1,51 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useParams } from "react-router-dom";
 import { Frame, TopBar } from "../components/Common";
+import { studiesApi, type StudyDetailResponse } from "../api/studies";
 import { ROUTE_PATHS } from "../routes/routingMap";
 
 export function TeamLayout() {
   const { teamId = "python-study" } = useParams();
+  const [study, setStudy] = useState<StudyDetailResponse | null>(null);
+  const [studyLoadFailed, setStudyLoadFailed] = useState(false);
+
+  useEffect(() => {
+    if (Number.isNaN(Number(teamId))) {
+      setStudy(null);
+      setStudyLoadFailed(false);
+      return;
+    }
+
+    let isMounted = true;
+    setStudyLoadFailed(false);
+
+    studiesApi.get(teamId)
+      .then((response) => {
+        if (!isMounted) return;
+        setStudy(response);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setStudy(null);
+        setStudyLoadFailed(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [teamId]);
+
+  const studyName = study?.title ?? "파이썬 스터디";
+  const studyMeta = study
+    ? `${study.status === "OPEN" ? "모집중" : "마감"} · ${study.currentMembers}/${study.maxMembers}명`
+    : studyLoadFailed ? "스터디 정보 없음" : "CS302 PROJECT";
 
   return (
     <Frame>
       <TopBar />
       <div className="team-shell">
         <aside className="team-nav">
-          <div className="team-logo"><span className="team-logo-icon" aria-hidden="true" /><b>파이썬 스터디</b><small>CS302 PROJECT</small></div>
+          <div className="team-logo"><span className="team-logo-icon" aria-hidden="true" /><b>{studyName}</b><small>{studyMeta}</small></div>
           <NavLink to={ROUTE_PATHS.teamBoard(teamId)}>
             <span className="team-nav-icon team-nav-icon-board" aria-hidden="true" />
             게시판

@@ -7,6 +7,7 @@ import { ROUTE_PATHS } from "../routes/routingMap";
 import { applicationsApi, type MyApplicationResponse } from "../api/applications";
 import { profileApi, type ProfileResponse } from "../api/profile";
 import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
+import { teamMembersApi } from "../api/teamMembers";
 import type { Study, StudyDetailData } from "../types";
 
 import { allMockStudies } from "../mockStudies";
@@ -434,6 +435,7 @@ export function StudyDetail() {
   const [detailError, setDetailError] = useState("");
   const [isApplying, setIsApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [isStudyMember, setIsStudyMember] = useState(false);
   const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
 
   const showToast = (message: Exclude<ToastMessage, null>) => {
@@ -444,6 +446,7 @@ export function StudyDetail() {
 
   useEffect(() => {
     setHasApplied(false);
+    setIsStudyMember(false);
     setToastMessage(null);
 
     if (!studyId || Number.isNaN(Number(studyId))) {
@@ -480,22 +483,47 @@ export function StudyDetail() {
     if (!studyId || Number.isNaN(Number(studyId)) || !localStorage.getItem("accessToken")) return;
 
     let isMounted = true;
+    const storedUserId = Number(localStorage.getItem("userId"));
 
-    applicationsApi.listMine({ page: 0, size: 100 })
-      .then((response) => {
-        if (!isMounted) return;
-        setHasApplied(response.applications.some((application) => (
+    Promise.allSettled([
+      teamMembersApi.list(studyId),
+      applicationsApi.listMine({ page: 0, size: 100 }),
+    ]).then(([membersResult, applicationsResult]) => {
+      if (!isMounted) return;
+
+      if (membersResult.status === "fulfilled") {
+        setIsStudyMember(membersResult.value.members.some((member) => member.userId === storedUserId));
+      } else {
+        setIsStudyMember(false);
+      }
+
+      if (applicationsResult.status === "fulfilled") {
+        setHasApplied(applicationsResult.value.applications.some((application) => (
           String(application.studyId) === String(studyId) && application.status === "PENDING"
         )));
-      })
-      .catch(() => {
-        if (isMounted) setHasApplied(false);
-      });
+      } else {
+        setHasApplied(false);
+      }
+    });
 
     return () => {
       isMounted = false;
     };
   }, [studyId]);
+
+  const handleStudyActionClick = async () => {
+    if (isStudyMember) {
+      if (!studyId || Number.isNaN(Number(studyId))) {
+        showToast({ type: "error", text: "샘플 스터디에는 입장할 수 없습니다." });
+        return;
+      }
+
+      navigate(ROUTE_PATHS.teamBoard(studyId));
+      return;
+    }
+
+    await handleApplicationClick();
+  };
 
   const handleApplicationClick = async () => {
     setToastMessage(null);
@@ -547,8 +575,8 @@ export function StudyDetail() {
                 </div>
               </div>
               <div className="detail-actions">
-                <button className={`primary${hasApplied ? " cancel-application" : ""}`} type="button" onClick={handleApplicationClick} disabled={isApplying}>
-                  {isApplying ? "처리 중..." : hasApplied ? "신청 취소" : "참여하기"} <span><img src={rocketIcon} alt="" /></span>
+                <button className={`primary${hasApplied && !isStudyMember ? " cancel-application" : ""}`} type="button" onClick={handleStudyActionClick} disabled={isApplying}>
+                  {isApplying ? "처리 중..." : isStudyMember ? "입장하기" : hasApplied ? "신청 취소" : "참여하기"} <span><img src={rocketIcon} alt="" /></span>
                 </button>
                 <button className="share" type="button"><img src={shareIcon} alt="Share" /></button>
               </div>
@@ -581,7 +609,6 @@ export function StudyDetail() {
     </Shell>
   );
 }
-
 export function MyPage() {
   const navigate = useNavigate();
   const toastTimerRef = useRef<number | null>(null);
