@@ -18,14 +18,26 @@ function RequireAuth() {
   return <Outlet />;
 }
 
+function RedirectIfAuthenticated() {
+  const accessToken = localStorage.getItem("accessToken");
+
+  if (accessToken) {
+    return <Navigate to={ROUTE_PATHS.home} replace />;
+  }
+
+  return <Outlet />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
       <Route index element={<Navigate to={ROUTE_PATHS.login} replace />} />
 
-      <Route element={<AuthLayout />}>
-        <Route path={ROUTE_PATHS.login} element={<AuthScreen mode="login" />} />
-        <Route path={ROUTE_PATHS.signup} element={<AuthScreen mode="signup" />} />
+      <Route element={<RedirectIfAuthenticated />}>
+        <Route element={<AuthLayout />}>
+          <Route path={ROUTE_PATHS.login} element={<AuthScreen mode="login" />} />
+          <Route path={ROUTE_PATHS.signup} element={<AuthScreen mode="signup" />} />
+        </Route>
       </Route>
 
       <Route element={<RequireAuth />}>
