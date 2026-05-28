@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { createStudy, profile, studies, studyDetail, topics } from "../data";
-import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard } from "../components/Common";
+import { createStudy, studies, studyDetail, topics } from "../data";
+import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard, Toast } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
+import { applicationsApi, type MyApplicationResponse } from "../api/applications";
 import { profileApi, type ProfileResponse } from "../api/profile";
 import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
+import { teamMembersApi } from "../api/teamMembers";
+import { useLanguage } from "../i18n";
 import type { Study, StudyDetailData } from "../types";
 
 import { allMockStudies } from "../mockStudies";
@@ -33,6 +36,28 @@ type CreateStudyDraft = {
   meetingCycle: string;
 };
 type ProfileMessage = { type: "success" | "error"; text: string } | null;
+type ToastMessage = { type: "success" | "error"; text: string } | null;
+
+function formatApplicationDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "지원일 확인 불가";
+
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} 지원`;
+}
+
+function getApplicationStatusLabel(status: MyApplicationResponse["status"]) {
+  if (status === "APPROVED") return "ACCEPTED";
+  if (status === "REJECTED") return "REJECTED";
+  return "PENDING";
+}
+
+function mapMyApplication(application: MyApplicationResponse) {
+  return {
+    title: application.studyTitle,
+    meta: `${formatApplicationDate(application.appliedAt)} · ${application.studyStatus === "OPEN" ? "모집중" : "마감"}`,
+    status: getApplicationStatusLabel(application.status),
+  };
+}
 
 function normalizeTag(tag: string) {
   return tag.startsWith("#") ? tag : `#${tag}`;
@@ -193,8 +218,8 @@ function getStudyApiErrorMessage(error: unknown, fallback: string) {
   }
 
   const status = response.status ?? 0;
-  if (status === 401 || status === 403) return "로그인 후 스터디를 생성할 수 있습니다.";
-  if (status >= 500) return "서버에서 스터디 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  if (status === 401 || status === 403) return "로그인 후 이용할 수 있습니다.";
+  if (status >= 500) return "서버에서 요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
 
   return fallback;
 }
@@ -249,6 +274,7 @@ export function MainDashboard() {
 export function ExplorePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { translate } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const fromMainSearch = Boolean((location.state as { fromMainSearch?: boolean } | null)?.fromMainSearch);
 
@@ -262,12 +288,12 @@ export function ExplorePage() {
     <Shell>
       <section className={`explore-page content-container ${fromMainSearch ? "from-main-search" : ""}`}>
         <div className="search-page-bar">
-          <button className="search-back-button" type="button" aria-label="메인으로 돌아가기" onClick={() => navigate(ROUTE_PATHS.home, { state: { fromSearch: true }, viewTransition: true })}>
+          <button className="search-back-button" type="button" aria-label={translate("메인으로 돌아가기")} onClick={() => navigate(ROUTE_PATHS.home, { state: { fromSearch: true }, viewTransition: true })}>
             ←
           </button>
           <label className="search-box explore-search route-search-box">
             <i />
-            <input ref={inputRef} placeholder="관심 있는 스터디 주제나 기술 스택을 검색해보세요" />
+            <input ref={inputRef} placeholder={translate("관심 있는 스터디 주제나 기술 스택을 검색해보세요")} />
           </label>
         </div>
         <ExploreResults />
@@ -277,14 +303,16 @@ export function ExplorePage() {
 }
 
 function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof useNavigate> }) {
+  const { translate } = useLanguage();
+
   return (
     <div className="dashboard-content-panel">
       <section className="callout-card">
         <div>
-          <span className="badge">New</span>
-          <h2>나만의 스터디를 만들고 함께 성장할 팀원을 모집하세요</h2>
-          <p>목표, 일정, 모집 인원을 설정하고 팀원 모집부터 운영까지 한곳에서 관리할 수 있습니다.</p>
-          <button className="primary" type="button" onClick={() => onNavigate(ROUTE_PATHS.createBasic)}>스터디 만들기</button>
+          <span className="badge">{translate("New")}</span>
+          <h2>{translate("나만의 스터디를 만들고 함께 성장할 팀원을 모집하세요")}</h2>
+          <p>{translate("목표, 일정, 모집 인원을 설정하고 팀원 모집부터 운영까지 한곳에서 관리할 수 있습니다.")}</p>
+          <button className="primary" type="button" onClick={() => onNavigate(ROUTE_PATHS.createBasic)}>{translate("스터디 만들기")}</button>
         </div>
         <Illustration />
       </section>
@@ -300,6 +328,7 @@ function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof us
 
 function ExploreResults() {
   const navigate = useNavigate();
+  const { translate } = useLanguage();
   const [selectedTopic, setSelectedTopic] = useState(topics[0]);
   const [apiStudies, setApiStudies] = useState<Study[] | null>(null);
   const [isLoadingStudies, setIsLoadingStudies] = useState(true);
@@ -369,8 +398,8 @@ function ExploreResults() {
       <TopicScroller selectedTopic={selectedTopic} onSelect={setSelectedTopic} />
       <section className="section-block">
         <SectionTitle title={title} subtitle={subtitle} />
-        {isLoadingStudies && <p className="section-note">스터디 목록을 불러오는 중입니다.</p>}
-        {studyLoadError && <p className="section-note">{studyLoadError}</p>}
+        {isLoadingStudies && <p className="section-note">{translate("스터디 목록을 불러오는 중입니다.")}</p>}
+        {studyLoadError && <p className="section-note">{translate(studyLoadError)}</p>}
         {/* key에 selectedTopic을 주어 리액트가 아예 요소를 다시 그리게 만들어 진입 애니메이션을 재활성시킵니다 */}
         <div key={selectedTopic} className="study-grid explore-grid">
           {displayedStudies.map((study, index) => (
@@ -388,13 +417,15 @@ function ExploreResults() {
 }
 
 function TopicScroller({ selectedTopic, onSelect }: { selectedTopic: string; onSelect: (topic: string) => void }) {
+  const { translate } = useLanguage();
+
   return (
     <section className="topics">
-      <h2>POPULAR TOPICS</h2>
+      <h2>{translate("POPULAR TOPICS")}</h2>
       <div>
         {topics.map((topic) => (
           <button className={selectedTopic === topic ? "active" : ""} key={topic} type="button" onClick={() => onSelect(topic)}>
-            {topic}
+            {translate(topic)}
           </button>
         ))}
       </div>
@@ -403,12 +434,29 @@ function TopicScroller({ selectedTopic, onSelect }: { selectedTopic: string; onS
 }
 
 export function StudyDetail() {
+  const navigate = useNavigate();
   const { studyId } = useParams();
+  const { translate } = useLanguage();
+  const toastTimerRef = useRef<number | null>(null);
   const [detail, setDetail] = useState<StudyDetailData | null>(studyDetail);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [isApplying, setIsApplying] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [isStudyMember, setIsStudyMember] = useState(false);
+  const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
+
+  const showToast = (message: Exclude<ToastMessage, null>) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2200);
+  };
 
   useEffect(() => {
+    setHasApplied(false);
+    setIsStudyMember(false);
+    setToastMessage(null);
+
     if (!studyId || Number.isNaN(Number(studyId))) {
       setDetail(studyDetail);
       setDetailError("");
@@ -439,47 +487,128 @@ export function StudyDetail() {
     };
   }, [studyId]);
 
+  useEffect(() => {
+    if (!studyId || Number.isNaN(Number(studyId)) || !localStorage.getItem("accessToken")) return;
+
+    let isMounted = true;
+    const storedUserId = Number(localStorage.getItem("userId"));
+
+    Promise.allSettled([
+      teamMembersApi.list(studyId),
+      applicationsApi.listMine({ page: 0, size: 100 }),
+    ]).then(([membersResult, applicationsResult]) => {
+      if (!isMounted) return;
+
+      if (membersResult.status === "fulfilled") {
+        setIsStudyMember(membersResult.value.members.some((member) => member.userId === storedUserId));
+      } else {
+        setIsStudyMember(false);
+      }
+
+      if (applicationsResult.status === "fulfilled") {
+        setHasApplied(applicationsResult.value.applications.some((application) => (
+          String(application.studyId) === String(studyId) && application.status === "PENDING"
+        )));
+      } else {
+        setHasApplied(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studyId]);
+
+  const handleStudyActionClick = async () => {
+    if (isStudyMember) {
+      if (!studyId || Number.isNaN(Number(studyId))) {
+        showToast({ type: "error", text: "샘플 스터디에는 입장할 수 없습니다." });
+        return;
+      }
+
+      navigate(ROUTE_PATHS.teamBoard(studyId));
+      return;
+    }
+
+    await handleApplicationClick();
+  };
+
+  const handleApplicationClick = async () => {
+    setToastMessage(null);
+
+    if (!studyId || Number.isNaN(Number(studyId))) {
+      showToast({ type: "error", text: "샘플 스터디에는 지원할 수 없습니다." });
+      return;
+    }
+
+    if (!localStorage.getItem("accessToken")) {
+      navigate(ROUTE_PATHS.login, { replace: true });
+      return;
+    }
+
+    setIsApplying(true);
+    try {
+      if (hasApplied) {
+        await studiesApi.cancelApplication(studyId);
+        setHasApplied(false);
+        showToast({ type: "success", text: "스터디 지원을 취소했습니다." });
+        return;
+      }
+
+      await studiesApi.apply(studyId, { message: "스터디에 참여하고 싶습니다." });
+      setHasApplied(true);
+      showToast({ type: "success", text: "스터디 지원이 완료되었습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getStudyApiErrorMessage(error, hasApplied ? "스터디 지원을 취소하지 못했습니다." : "스터디에 지원하지 못했습니다.") });
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
   return (
     <Shell>
       <section className="detail-page content-container">
-        {isLoadingDetail && <p className="section-note">스터디 상세 정보를 불러오는 중입니다.</p>}
-        {detailError && <p className="section-note">{detailError}</p>}
+        {toastMessage && <Toast type={toastMessage.type}>{translate(toastMessage.text)}</Toast>}
+        {isLoadingDetail && <p className="section-note">{translate("스터디 상세 정보를 불러오는 중입니다.")}</p>}
+        {detailError && <p className="section-note">{translate(detailError)}</p>}
         {detail && (
           <>
             <div className="detail-top">
               <div>
-                <h1>{detail.title}</h1>
-                <h2>{detail.subtitle}</h2>
+                <h1>{translate(detail.title)}</h1>
+                <h2>{translate(detail.subtitle)}</h2>
                 <div className="detail-meta">
-                  {detail.tags.map((tag) => <span key={tag}>{tag}</span>)}
-                  <span className="location">{detail.location}</span>
+                  {detail.tags.map((tag) => <span key={tag}>{translate(tag)}</span>)}
+                  <span className="location">{translate(detail.location)}</span>
                 </div>
               </div>
               <div className="detail-actions">
-                <button className="primary" type="button">참여하기 <span><img src={rocketIcon} alt="" /></span></button>
+                <button className={`primary${hasApplied && !isStudyMember ? " cancel-application" : ""}`} type="button" onClick={handleStudyActionClick} disabled={isApplying}>
+                  {translate(isApplying ? "처리 중..." : isStudyMember ? "입장하기" : hasApplied ? "신청 취소" : "참여하기")} <span><img src={rocketIcon} alt="" /></span>
+                </button>
                 <button className="share" type="button"><img src={shareIcon} alt="Share" /></button>
               </div>
             </div>
             <div className="detail-grid">
               <section className="panel wide-panel">
-                <h2><span><img src={informIcon} alt="" /></span> 스터디 소개</h2>
-                {detail.description.map((p, i) => <p key={i}>{p}</p>)}
+                <h2><span><img src={informIcon} alt="" /></span> {translate("스터디 소개")}</h2>
+                {detail.description.map((p, i) => <p key={i}>{translate(p)}</p>)}
               </section>
               <aside className="panel detail-info-card">
                 <dl>
-                  {detail.info.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                  {detail.info.map(({ label, value }) => <div key={label}><dt>{translate(label)}</dt><dd>{translate(value)}</dd></div>)}
                 </dl>
               </aside>
               <section className="panel rules-panel">
-                <h2><span><img src={ruleIcon} alt="" /></span> 규칙</h2>
+                <h2><span><img src={ruleIcon} alt="" /></span> {translate("규칙")}</h2>
                 {detail.rules.map((rule) => <Rule key={rule.no} {...rule} />)}
               </section>
               <aside className="panel member-card">
-                <h2>참여중인 멤버</h2>
+                <h2>{translate("참여중인 멤버")}</h2>
                 {detail.members.map(({ name, role, avatar }) => (
-                  <div className="member-mini" key={name}><Avatar name={avatar} /><span><b>{name}</b><small>{role}</small></span></div>
+                  <div className="member-mini" key={name}><Avatar name={avatar} /><span><b>{translate(name)}</b><small>{translate(role)}</small></span></div>
                 ))}
-                <button type="button">+ 4 Seats Available</button>
+                <button type="button">{translate("+ 4 Seats Available")}</button>
               </aside>
             </div>
           </>
@@ -488,9 +617,10 @@ export function StudyDetail() {
     </Shell>
   );
 }
-
 export function MyPage() {
   const navigate = useNavigate();
+  const { translate } = useLanguage();
+  const toastTimerRef = useRef<number | null>(null);
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
   const [interestTags, setInterestTags] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -501,8 +631,18 @@ export function MyPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
-  const [showProfileSavedToast, setShowProfileSavedToast] = useState(false);
   const [profileMessage, setProfileMessage] = useState<ProfileMessage>(null);
+  const [myApplications, setMyApplications] = useState<MyApplicationResponse[]>([]);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
+  const [applicationLoadError, setApplicationLoadError] = useState("");
+  const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
+  const [cancellingApplicationId, setCancellingApplicationId] = useState<number | null>(null);
+
+  const showToast = (message: Exclude<ToastMessage, null>) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 2200);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -531,6 +671,30 @@ export function MyPage() {
       })
       .finally(() => {
         if (isMounted) setIsLoadingProfile(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingApplications(true);
+    setApplicationLoadError("");
+
+    applicationsApi.listMine()
+      .then((response) => {
+        if (!isMounted) return;
+        setMyApplications(response.applications);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setMyApplications([]);
+        setApplicationLoadError("지원 현황을 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingApplications(false);
       });
 
     return () => {
@@ -577,10 +741,9 @@ export function MyPage() {
       setProfileData(savedProfile);
       setHasProfile(true);
       setIsEditingProfile(false);
-      setShowProfileSavedToast(true);
-      window.setTimeout(() => setShowProfileSavedToast(false), 2200);
+      showToast({ type: "success", text: "프로필이 저장되었습니다." });
     } catch (error) {
-      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
+      showToast({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 저장하지 못했습니다.") });
     } finally {
       setIsSavingProfile(false);
     }
@@ -604,21 +767,39 @@ export function MyPage() {
 
     try {
       await profileApi.delete();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
       setProfileData(null);
       setHasProfile(false);
       setIsEditingProfile(false);
       setInterestTags([]);
-      setProfileMessage({ type: "success", text: "프로필이 삭제되었습니다." });
+      navigate(ROUTE_PATHS.login, { replace: true });
     } catch (error) {
-      setProfileMessage({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 삭제하지 못했습니다.") });
+      showToast({ type: "error", text: getProfileApiErrorMessage(error, "프로필을 삭제하지 못했습니다.") });
     } finally {
       setIsSavingProfile(false);
     }
   };
 
+  const handleCancelApplication = async (application: MyApplicationResponse) => {
+    if (cancellingApplicationId) return;
+
+    setCancellingApplicationId(application.applicationId);
+    try {
+      await studiesApi.cancelApplication(application.studyId);
+      setMyApplications((current) => current.filter((item) => item.applicationId !== application.applicationId));
+      showToast({ type: "success", text: "스터디 지원을 취소했습니다." });
+    } catch (error) {
+      showToast({ type: "error", text: getStudyApiErrorMessage(error, "스터디 지원을 취소하지 못했습니다.") });
+    } finally {
+      setCancellingApplicationId(null);
+    }
+  };
+
   return (
     <main className="profile-page content-container">
-      {showProfileSavedToast && <div className="attendance-toast" role="status">프로필이 저장되었습니다.</div>}
+      {toastMessage && <Toast type={toastMessage.type}>{translate(toastMessage.text)}</Toast>}
       <section className="profile-hero">
         <div className="profile-photo-wrap">
           <Avatar name="user" className="profile-photo" />
@@ -627,10 +808,10 @@ export function MyPage() {
         <div className="profile-copy">
           {isEditingProfile ? (
             <div className="profile-edit-fields">
-              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label="프로필 이름" placeholder="이름" disabled={isSavingProfile} />
-              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label="학교 정보" placeholder="학교" disabled={isSavingProfile} />
-              <input value={profileMajor} onChange={(event) => setProfileMajor(event.target.value)} aria-label="전공 정보" placeholder="전공" disabled={isSavingProfile} />
-              <textarea value={profileBio} onChange={(event) => setProfileBio(event.target.value)} aria-label="자기소개" placeholder="자기소개" disabled={isSavingProfile} />
+              <input value={profileName} onChange={(event) => setProfileName(event.target.value)} aria-label={translate("프로필 이름")} placeholder={translate("이름")} disabled={isSavingProfile} />
+              <input value={profileSchool} onChange={(event) => setProfileSchool(event.target.value)} aria-label={translate("학교 정보")} placeholder={translate("학교")} disabled={isSavingProfile} />
+              <input value={profileMajor} onChange={(event) => setProfileMajor(event.target.value)} aria-label={translate("전공 정보")} placeholder={translate("전공")} disabled={isSavingProfile} />
+              <textarea value={profileBio} onChange={(event) => setProfileBio(event.target.value)} aria-label={translate("자기소개")} placeholder={translate("자기소개")} disabled={isSavingProfile} />
             </div>
           ) : (
             <div className="profile-text-lines">
@@ -641,23 +822,23 @@ export function MyPage() {
           )}
           {profileMessage && (
             <p className={`profile-feedback ${profileMessage.type}`}>
-              {profileMessage.text}
+              {translate(profileMessage.text)}
             </p>
           )}
         </div>
         <div className="profile-actions">
           <button className="primary" type="button" disabled={isLoadingProfile || isSavingProfile} onClick={handleProfileAction}>
-            {isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집"}
+            {translate(isSavingProfile ? "저장 중..." : isEditingProfile ? "저장하기" : "프로필 편집")}
           </button>
           {isEditingProfile && (
             <button className="profile-plain-button" type="button" disabled={isSavingProfile} onClick={handleCancelEdit}>
-              취소
+              {translate("취소")}
             </button>
           )}
         </div>
       </section>
-      {isLoadingProfile && <p className="section-note">프로필 정보를 불러오는 중입니다.</p>}
-      {profileMessage && <p className={`section-note form-${profileMessage.type}`}>{profileMessage.text}</p>}
+      {isLoadingProfile && <p className="section-note">{translate("프로필 정보를 불러오는 중입니다.")}</p>}
+      {profileMessage && <p className={`section-note form-${profileMessage.type}`}>{translate(profileMessage.text)}</p>}
       <section className="profile-grid">
         <div className="profile-study-section">
           <Panel title="" className="keyword-panel keyword-strip">
@@ -669,16 +850,36 @@ export function MyPage() {
           </Panel>
           <div className="profile-danger-row">
             <button type="button" disabled={isSavingProfile || !profileData} onClick={handleDeleteProfile}>
-              계정 삭제
+              {translate("계정 삭제")}
             </button>
           </div>
-          <h2>참여 중인 스터디</h2>
+          <h2>{translate("참여 중인 스터디")}</h2>
           <div className="study-grid profile-study-grid">
             {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => navigate(ROUTE_PATHS.teamBoard())} />)}
           </div>
-          <h2>지원 현황</h2>
+          <h2>{translate("지원 현황")}</h2>
           <Panel title="" className="application-panel">
-            {profile.applications.map((application) => <StatusRow key={application.title} {...application} />)}
+            {isLoadingApplications && <p className="section-note">{translate("지원 현황을 불러오는 중입니다.")}</p>}
+            {applicationLoadError && <p className="section-note form-error">{translate(applicationLoadError)}</p>}
+            {!isLoadingApplications && !applicationLoadError && myApplications.length === 0 && (
+              <p className="section-note">{translate("아직 지원한 스터디가 없습니다.")}</p>
+            )}
+            {myApplications.map((application) => (
+              <StatusRow
+                key={application.applicationId}
+                {...mapMyApplication(application)}
+                action={application.status === "PENDING" ? (
+                  <button
+                    className="application-cancel-button"
+                    type="button"
+                    onClick={() => handleCancelApplication(application)}
+                    disabled={cancellingApplicationId === application.applicationId}
+                  >
+                    {translate(cancellingApplicationId === application.applicationId ? "취소 중..." : "취소")}
+                  </button>
+                ) : undefined}
+              />
+            ))}
           </Panel>
         </div>
       </section>
@@ -689,6 +890,7 @@ export function MyPage() {
 export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { translate } = useLanguage();
   const next = step === 1 ? ROUTE_PATHS.createRules : step === 2 ? ROUTE_PATHS.createSchedule : ROUTE_PATHS.home;
   const previous = step === 2 ? ROUTE_PATHS.createBasic : step === 3 ? ROUTE_PATHS.createRules : ROUTE_PATHS.home;
   const title = step === 1 ? "기본 정보를 입력해주세요" : step === 2 ? "규칙 및 태그를 입력해주세요" : "일정 설정";
@@ -775,17 +977,17 @@ export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
       <PageHeading title="새 스터디 만들기" subtitle="당신의 지적 성장을 이끌어갈 동료들을 찾아보세요." />
       <Stepper step={step} />
       <section className="create-card">
-        <h2>{title}</h2>
-        {submitError && <p className="section-note form-error">{submitError}</p>}
+        <h2>{translate(title)}</h2>
+        {submitError && <p className="section-note form-error">{translate(submitError)}</p>}
         {step === 1 && <BasicForm draft={draft} onChange={updateDraft} />}
         {step === 2 && <RulesForm draft={draft} onChange={updateDraft} />}
         {step === 3 && <ScheduleForm draft={draft} onChange={updateDraft} />}
         <footer className="form-footer">
           <button className="plain" type="button" onClick={handleCancel} disabled={isSubmitting}>
-            {step === 1 ? "× 취소하기" : "← 이전으로"}
+            {translate(step === 1 ? "× 취소하기" : "← 이전으로")}
           </button>
           <button className="primary" type="button" onClick={handleNext} disabled={isSubmitting}>
-            {step === 3 ? (isSubmitting ? "생성 중..." : "완료") : "다음 단계로 이동"} <span>→</span>
+            {translate(step === 3 ? (isSubmitting ? "생성 중..." : "완료") : "다음 단계로 이동")} <span>→</span>
           </button>
         </footer>
       </section>
@@ -794,12 +996,14 @@ export function CreateStudy({ step }: { step: 1 | 2 | 3 }) {
 }
 
 function Stepper({ step }: { step: 1 | 2 | 3 }) {
+  const { translate } = useLanguage();
+
   return (
     <div className="stepper">
       {createStudy.steps.map((label, index) => (
         <div className={step >= index + 1 ? "active" : ""} key={label}>
           <span>{step > index + 1 ? "✓" : index + 1}</span>
-          <b>STEP {index + 1}. {label}</b>
+          <b>STEP {index + 1}. {translate(label)}</b>
         </div>
       ))}
     </div>
@@ -807,6 +1011,7 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
 }
 
 function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
+  const { translate } = useLanguage();
   const defaultCategory = createStudy.categories.find((category) => category.selected)?.label ?? createStudy.categories[0].label;
   const defaultVisibility = createStudy.visibilityOptions.find((option) => option.selected)?.label ?? createStudy.visibilityOptions[0].label;
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
@@ -821,7 +1026,7 @@ function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
         onChange={(event) => onChange({ ...draft, title: event.target.value })}
       />
       <label>
-        카테고리 선택
+        {translate("카테고리 선택")}
         <div className="category-grid">
           {createStudy.categories.map(({ icon, label }) => (
             <button
@@ -831,15 +1036,15 @@ function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
               type="button"
               onClick={() => setSelectedCategory(label)}
             >
-              <span>{icon}</span>{label}
+              <span>{icon}</span>{translate(label)}
             </button>
           ))}
         </div>
       </label>
       <label>
-        스터디 목표 및 소개
+        {translate("스터디 목표 및 소개")}
         <textarea
-          placeholder="스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요."
+          placeholder={translate("스터디를 통해 얻고자 하는 바와 간략한 소개를 적어주세요.")}
           value={draft.description}
           onChange={(event) => onChange({ ...draft, description: event.target.value })}
         />
@@ -853,7 +1058,7 @@ function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
           onChange={(event) => onChange({ ...draft, maxMembers: event.target.value })}
         />
         <label>
-          공개 여부
+          {translate("공개 여부")}
           <div className="visibility-row">
             {createStudy.visibilityOptions.map(({ label }) => (
               <button
@@ -863,7 +1068,7 @@ function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
                 type="button"
                 onClick={() => setSelectedVisibility(label)}
               >
-                {label}
+                {translate(label)}
               </button>
             ))}
           </div>
@@ -874,6 +1079,7 @@ function BasicForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
 }
 
 function RulesForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
+  const { translate } = useLanguage();
   const handleRemoveTag = (tagToRemove: string) => {
     onChange({ ...draft, tags: draft.tags.filter((tag) => tag !== tagToRemove) });
   };
@@ -894,7 +1100,7 @@ function RulesForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
         onChange={(event) => onChange({ ...draft, languages: event.target.value })}
       />
       <label>
-        태그
+        {translate("태그")}
         <TagList tags={draft.tags} onRemoveTag={handleRemoveTag} onAddTag={handleAddTag} />
       </label>
     </div>
@@ -902,18 +1108,20 @@ function RulesForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (dr
 }
 
 function ScheduleForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: (draft: CreateStudyDraft) => void }) {
+  const { translate } = useLanguage();
+
   return (
     <div className="schedule-list">
       <label>
-        <b>모임 주기</b>
+        <b>{translate("모임 주기")}</b>
         <input
           value={draft.meetingCycle}
           onChange={(event) => onChange({ ...draft, meetingCycle: event.target.value })}
-          placeholder="예: 매주 수요일 16:00"
+          placeholder={translate("예: 매주 수요일 16:00")}
         />
       </label>
       <label>
-        <b>스터디 기간</b>
+        <b>{translate("스터디 기간")}</b>
         <input
           type="number"
           min="1"
@@ -927,5 +1135,7 @@ function ScheduleForm({ draft, onChange }: { draft: CreateStudyDraft; onChange: 
 }
 
 function Rule({ no, title, desc }: { no: string; title: string; desc: string }) {
-  return <div className="rule-row"><span>{no}</span><div><b>{title}</b><p>{desc}</p></div></div>;
+  const { translate } = useLanguage();
+
+  return <div className="rule-row"><span>{no}</span><div><b>{translate(title)}</b><p>{translate(desc)}</p></div></div>;
 }

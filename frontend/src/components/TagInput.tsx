@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLanguage } from "../i18n";
 
 const TAG_COLORS = [
   { bg: "var(--purple)", color: "#fff", border: "none" },
@@ -12,6 +13,7 @@ const TAG_COLORS = [
 ];
 
 export const TagList = ({ tags, onRemoveTag, onAddTag }: { tags: string[], onRemoveTag?: (tag: string) => void, onAddTag?: (tag: string) => void }) => {
+  const { translate } = useLanguage();
   const [isAdding, setIsAdding] = useState(false);
   const [inputValue, setInputValue] = useState("");
 
@@ -36,7 +38,7 @@ export const TagList = ({ tags, onRemoveTag, onAddTag }: { tags: string[], onRem
   return (
     <div className="keyword-set auth-keywords tag-list-container">
       {tags.length === 0 && (
-        <span className="empty-tag-hint">관심 태그를 입력해 주세요</span>
+        <span className="empty-tag-hint">{translate("관심 태그를 입력해 주세요")}</span>
       )}
       {tags.map((tag, index) => {
         const colorStyle = TAG_COLORS[index % TAG_COLORS.length];
@@ -52,7 +54,7 @@ export const TagList = ({ tags, onRemoveTag, onAddTag }: { tags: string[], onRem
               gap: '6px'
             }}
           >
-            {tag}
+            {translate(tag)}
             {onRemoveTag && (
               <b style={{ cursor: 'pointer', margin: 0 }} onClick={() => onRemoveTag(tag)}>×</b>
             )}
@@ -70,10 +72,10 @@ export const TagList = ({ tags, onRemoveTag, onAddTag }: { tags: string[], onRem
             onBlur={handleAdd}
             onKeyDown={handleKeyDown}
             autoFocus
-            placeholder="태그 입력"
+            placeholder={translate("태그 입력")}
           />
         ) : (
-          <button type="button" onClick={() => setIsAdding(true)}>+ Add Tag</button>
+          <button type="button" onClick={() => setIsAdding(true)}>{translate("+ Add Tag")}</button>
         )
       )}
     </div>

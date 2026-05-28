@@ -2,6 +2,8 @@ import { screens } from "../data";
 import type { ScreenId, Study } from "../types";
 import { useState, type ChangeEvent, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { authApi } from "../api/auth";
+import { LANGUAGE_OPTIONS, useLanguage, type LanguageCode } from "../i18n";
 import { getTopLevelRoute, ROUTE_PATHS } from "../routes/routingMap";
 import graduationCapIcon from "../assets/graduation-cap.svg";
 import userProfileIcon from "../assets/user_profile.svg";
@@ -13,20 +15,15 @@ import globeIcon from "../assets/language.svg";
 type Navigate = (screen: ScreenId) => void;
 type TopLevelNav = "main" | "explore" | "create" | "mypage";
 
-type Language = { code: string; label: string };
-const LANGUAGES: Language[] = [
-  { code: "KO", label: "한국어" },
-  { code: "EN", label: "English" },
-  { code: "ZH", label: "中文" },
-];
-
 export function ScreenSwitcher({ current, onChange }: { current: ScreenId; onChange: Navigate }) {
+  const { translate } = useLanguage();
+
   return (
     <nav className="screen-switcher" aria-label="Figma 12 screens">
       {screens.map((item) => (
         <button className={current === item.id ? "active" : ""} key={item.id} type="button" onClick={() => onChange(item.id)}>
-          <small>{item.group}</small>
-          {item.label}
+          <small>{translate(item.group)}</small>
+          {translate(item.label)}
         </button>
       ))}
     </nav>
@@ -40,18 +37,27 @@ export function Frame({ children }: { children: ReactNode }) {
 export function TopBar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { language, setLanguage, translate } = useLanguage();
   const activeNav: TopLevelNav = getTopLevelRoute(pathname);
   const activeIndex = activeNav === "main" ? 0 : activeNav === "explore" ? 1 : activeNav === "create" ? 2 : 3;
-  const [lang, setLang] = useState(LANGUAGES[0]);
+  const lang = LANGUAGE_OPTIONS.find((option) => option.code === language) ?? LANGUAGE_OPTIONS[0];
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("userId");
-    setShowProfileMenu(false);
-    navigate(ROUTE_PATHS.login, { replace: true });
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    try {
+      if (refreshToken) {
+        await authApi.logout({ refreshToken });
+      }
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
+      setShowProfileMenu(false);
+      navigate(ROUTE_PATHS.login, { replace: true });
+    }
   };
 
   return (
@@ -60,11 +66,11 @@ export function TopBar() {
         <div className="brand-img"></div>
         <span className="brand-link">StudyMate</span>
       </NavLink>
-      <nav className={`top-nav active-${activeIndex}`} aria-label="주요 화면">
-        <NavLink className={activeNav === "main" ? "active" : ""} to={ROUTE_PATHS.home} end>Home</NavLink>
-        <NavLink className={activeNav === "explore" ? "active" : ""} to={ROUTE_PATHS.studies} end>Search</NavLink>
-        <NavLink className={activeNav === "create" ? "active" : ""} to={ROUTE_PATHS.createBasic}>Create Study</NavLink>
-        <NavLink className={activeNav === "mypage" ? "active" : ""} to={ROUTE_PATHS.mypage}>My Page</NavLink>
+      <nav className={`top-nav active-${activeIndex}`} aria-label={translate("주요 화면")}>
+        <NavLink className={activeNav === "main" ? "active" : ""} to={ROUTE_PATHS.home} end>{translate("Home")}</NavLink>
+        <NavLink className={activeNav === "explore" ? "active" : ""} to={ROUTE_PATHS.studies} end>{translate("Search")}</NavLink>
+        <NavLink className={activeNav === "create" ? "active" : ""} to={ROUTE_PATHS.createBasic}>{translate("Create Study")}</NavLink>
+        <NavLink className={activeNav === "mypage" ? "active" : ""} to={ROUTE_PATHS.mypage}>{translate("My Page")}</NavLink>
       </nav>
       <div className="top-actions">
         <div className="lang-selector">
@@ -76,23 +82,23 @@ export function TopBar() {
               setShowProfileMenu(false);
             }}
           >
-            <img src={globeIcon} alt="Globe Icon" className="globe-icon" />
-            {lang.code} <i className="arrow-down" />
+            <img src={globeIcon} alt={translate("Globe Icon")} className="globe-icon" />
+            {lang.shortLabel} <i className="arrow-down" />
           </button>
           
           {showLangMenu && (
             <div className="lang-dropdown">
-              {LANGUAGES.map(l => (
+              {LANGUAGE_OPTIONS.map(l => (
                 <button 
                   key={l.code} 
                   type="button" 
                   onClick={() => {
-                    setLang(l);
+                    setLanguage(l.code as LanguageCode);
                     setShowLangMenu(false);
                   }}
                   className={lang.code === l.code ? "active" : ""}
                 >
-                  {l.label} ({l.code})
+                  {l.label} ({l.shortLabel})
                 </button>
               ))}
             </div>
@@ -102,7 +108,7 @@ export function TopBar() {
           <button
             className="avatar-button"
             type="button"
-            aria-label="프로필 메뉴 열기"
+            aria-label={translate("프로필 메뉴 열기")}
             aria-expanded={showProfileMenu}
             onClick={() => {
               setShowProfileMenu(!showProfileMenu);
@@ -113,8 +119,8 @@ export function TopBar() {
           </button>
           {showProfileMenu && (
             <div className="profile-dropdown">
-              <NavLink to={ROUTE_PATHS.mypage} onClick={() => setShowProfileMenu(false)}>마이페이지</NavLink>
-              <button className="logout-menu-item" type="button" onClick={handleLogout}>로그아웃</button>
+              <NavLink to={ROUTE_PATHS.mypage} onClick={() => setShowProfileMenu(false)}>{translate("마이페이지")}</NavLink>
+              <button className="logout-menu-item" type="button" onClick={handleLogout}>{translate("로그아웃")}</button>
             </div>
           )}
         </div>
@@ -133,13 +139,15 @@ export function Shell({ children, sidebar = false }: { children: ReactNode; side
 }
 
 export function StudySideNav() {
+  const { translate } = useLanguage();
+
   return (
     <aside className="study-side">
-      <div className="team-logo"><span>✣</span><b>파이썬 스터디</b><small>CS302 PROJECT</small></div>
-      <a className="active">Board</a>
-      <a>Schedule</a>
-      <a>Attendance</a>
-      <button type="button">New Entry</button>
+      <div className="team-logo"><span>✣</span><b>{translate("파이썬 스터디")}</b><small>CS302 PROJECT</small></div>
+      <a className="active">{translate("Board")}</a>
+      <a>{translate("Schedule")}</a>
+      <a>{translate("Attendance")}</a>
+      <button type="button">{translate("New Entry")}</button>
     </aside>
   );
 }
@@ -157,14 +165,16 @@ export function Hero({
   className?: string;
   searchBoxClassName?: string;
 }) {
+  const { translate } = useLanguage();
+
   return (
     <section className={`hero content-container ${className}`}>
-      <h1><span>StudyMate</span>맞춤 스터디 탐색</h1>
-      <p>자신의 목표에 맞는 스터디 팀을 찾고, 동료들과 함께 더 멀리 나아가세요.</p>
+      <h1><span>StudyMate</span>{translate("맞춤 스터디 탐색")}</h1>
+      <p>{translate("자신의 목표에 맞는 스터디 팀을 찾고, 동료들과 함께 더 멀리 나아가세요.")}</p>
       <label className={`search-box ${searchBoxClassName}`}>
         <i />
         <input
-          placeholder="관심 있는 스터디 주제나 기술 스택을 검색해보세요"
+          placeholder={translate("관심 있는 스터디 주제나 기술 스택을 검색해보세요")}
           value={searchValue}
           onChange={(event) => onSearchChange?.(event.target.value)}
           onClick={onSearchFocus}
@@ -176,25 +186,29 @@ export function Hero({
 }
 
 export function SectionTitle({ title, subtitle, action, onAction }: { title: string; subtitle?: string; action?: string; onAction?: () => void }) {
+  const { translate } = useLanguage();
+
   return (
     <header className="section-title">
       <div>
-        <h2>{title}</h2>
-        {subtitle && <p>{subtitle}</p>}
+        <h2>{translate(title)}</h2>
+        {subtitle && <p>{translate(subtitle)}</p>}
       </div>
-      {action && <button type="button" onClick={onAction}>{action}</button>}
+      {action && <button type="button" onClick={onAction}>{translate(action)}</button>}
     </header>
   );
 }
 
 export function StudyCard({ study, action, onAction }: { study: Study; action: string; onAction: () => void }) {
+  const { translate } = useLanguage();
+
   return (
     <article className="study-card">
       <StudyThumb title={study.title} />
-      <div className="tag-row">{study.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-      <h3>{study.title}</h3>
-      <p><span className="meta people">{study.people}</span><span className="meta time">{study.duration}</span></p>
-      <button type="button" onClick={onAction}>{action}</button>
+      <div className="tag-row">{study.tags.map((tag) => <span key={tag}>{translate(tag)}</span>)}</div>
+      <h3>{translate(study.title)}</h3>
+      <p><span className="meta people">{translate(study.people)}</span><span className="meta time">{translate(study.duration)}</span></p>
+      <button type="button" onClick={onAction}>{translate(action)}</button>
     </article>
   );
 }
@@ -247,6 +261,7 @@ export function Avatar({ name, className = "" }: { name: string; className?: str
 }
 
 function StudyThumb({ title }: { title: string }) {
+  const { translate } = useLanguage();
   const pastelColors = [
     "#fdf2f8", // 파스텔 핑크
     "#eef2ff", // 파스텔 블루
@@ -261,7 +276,7 @@ function StudyThumb({ title }: { title: string }) {
 
   return (
     <div className="study-thumb text-thumb" style={{ background: bgColor }}>
-      <span className="thumb-title">{title}</span>
+      <span className="thumb-title">{translate(title)}</span>
     </div>
   );
 }
@@ -285,11 +300,13 @@ export function Field({
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
 }) {
+  const { translate } = useLanguage();
+
   return (
     <label className="field">
-      {label}
+      {translate(label)}
       <span className="input-wrap">
-        <input autoComplete={autoComplete} disabled={disabled} placeholder={placeholder} type={type} value={value} onChange={onChange} />
+        <input autoComplete={autoComplete} disabled={disabled} placeholder={translate(placeholder)} type={type} value={value} onChange={onChange} />
         {icon && <em>{icon}</em>}
       </span>
     </label>
@@ -297,13 +314,29 @@ export function Field({
 }
 
 export function PageHeading({ title, subtitle }: { title: string; subtitle: string }) {
-  return <header className="page-heading"><h1>{title}</h1><p>{subtitle}</p></header>;
+  const { translate } = useLanguage();
+
+  return <header className="page-heading"><h1>{translate(title)}</h1><p>{translate(subtitle)}</p></header>;
 }
 
 export function Panel({ title, className = "", children }: { title: string; className?: string; children: ReactNode }) {
-  return <section className={`panel ${className}`}>{title && <h2>{title}</h2>}{children}</section>;
+  const { translate } = useLanguage();
+
+  return <section className={`panel ${className}`}>{title && <h2>{translate(title)}</h2>}{children}</section>;
 }
 
-export function StatusRow({ title, meta, status }: { title: string; meta: string; status: string }) {
-  return <div className="status-row"><span className="icon-tile" /><div><b>{title}</b><small>{meta}</small></div><em>{status}</em></div>;
+export function Toast({ type = "success", children }: { type?: "success" | "error"; children: ReactNode }) {
+  return <div className={`attendance-toast ${type}`} role="status">{children}</div>;
+}
+
+export function StatusRow({ title, meta, status, action }: { title: string; meta: string; status: string; action?: ReactNode }) {
+  const { translate } = useLanguage();
+
+  return (
+    <div className="status-row">
+      <span className="icon-tile" />
+      <div><b>{translate(title)}</b><small>{translate(meta)}</small></div>
+      <div className="status-row-actions"><em>{translate(status)}</em>{action}</div>
+    </div>
+  );
 }
