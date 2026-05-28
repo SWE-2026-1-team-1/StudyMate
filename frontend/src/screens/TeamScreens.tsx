@@ -793,12 +793,20 @@ function Post({
         </div>
       </header>
       <p>{content}</p>
+      <footer>
+        <button className="comment-toggle" type="button" onClick={onToggle} aria-expanded={isOpen}>
+          <span aria-hidden="true" />
+          {comments.length}
+        </button>
+        <time>{formatPostDate(createdAt)}</time>
+        <strong>{authorName}</strong>
+      </footer>
       {isOpen && (
         <section className="comment-panel" aria-label="댓글">
           {comments.length === 0 && <p className="section-note">아직 댓글이 없습니다.</p>}
           {comments.map((comment) => (
             <article className="comment-item" key={comment.commentId}>
-              <i className="initial-avatar">{getInitials(comment.authorName)}</i>
+              <Avatar name={comment.authorName} />
               <div>
                 <header>
                   <strong>{comment.authorName}</strong>
@@ -824,15 +832,6 @@ function Post({
           </form>
         </section>
       )}
-      <footer>
-        <button className="comment-toggle" type="button" onClick={onToggle} aria-expanded={isOpen}>
-          <span aria-hidden="true" />
-          {comments.length}
-        </button>
-        <time>{formatPostDate(createdAt)}</time>
-        <strong>{authorName}</strong>
-        <i className="initial-avatar">{getInitials(authorName)}</i>
-      </footer>
     </article>
   );
 }

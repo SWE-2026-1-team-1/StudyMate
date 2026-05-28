@@ -2736,15 +2736,23 @@ input:disabled {
 .comment-panel {
   display: grid;
   gap: calc(30px * var(--ui-scale));
-  margin: calc(8px * var(--ui-scale)) 0 0;
-  padding: calc(34px * var(--ui-scale)) 0 0;
-  border-top: calc(1px * var(--ui-scale)) solid #dfe5ec;
+  margin: calc(28px * var(--ui-scale)) 0 0;
+  border: calc(1px * var(--ui-scale)) solid #e5e9f0;
+  border-radius: calc(24px * var(--ui-scale));
+  padding: calc(28px * var(--ui-scale));
+  background: #f8fafc;
 }
 .comment-item {
   display: grid;
   grid-template-columns: calc(42px * var(--ui-scale)) 1fr;
   gap: calc(20px * var(--ui-scale));
   align-items: start;
+  border-bottom: calc(1px * var(--ui-scale)) solid #e5e9f0;
+  padding-bottom: calc(22px * var(--ui-scale));
+}
+.comment-item:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 .comment-item header {
   display: flex;
@@ -2782,7 +2790,7 @@ input:disabled {
   border: calc(1px * var(--ui-scale)) solid #e5e9f0;
   border-radius: calc(22px * var(--ui-scale));
   padding: 0 calc(12px * var(--ui-scale)) 0 calc(40px * var(--ui-scale));
-  background: #f8f9fc;
+  background: #fff;
 }
 .comment-form input {
   width: 100%;
