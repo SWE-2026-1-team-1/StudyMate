@@ -2,6 +2,7 @@ package com.studymate.study.repository;
 
 import com.studymate.study.domain.StudyMember;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -88,4 +89,16 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     """)
     Optional<StudyMember> findActiveNoticeWriter(@Param("studyId") long studyId,
                                                  @Param("userId") long userId);
+
+    // 마이스터디 (D-022) -----
+
+    @Query("""
+        select sm from StudyMember sm
+        join com.studymate.study.domain.Study s on s.id = sm.studyId
+        where sm.userId   = :userId
+          and sm.isActive = true
+          and s.isDeleted = false
+        order by sm.joinedAt desc
+    """)
+    List<StudyMember> findMyActiveMemberships(@Param("userId") long userId, Pageable pageable);
 }

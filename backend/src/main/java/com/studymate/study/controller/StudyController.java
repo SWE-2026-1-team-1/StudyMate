@@ -50,6 +50,15 @@ public class StudyController {
         return studyService.list(page, size);
     }
 
+    @GetMapping("/my")
+    public MyStudyListResponse listMine(
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @RequestParam(defaultValue = "0")  @Min(0)         int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+    ) {
+        return studyService.listMine(principal.getUserId(), page, size);
+    }
+
     @GetMapping("/{studyId}")
     public StudyDetailResponse detail(
             @PathVariable long studyId

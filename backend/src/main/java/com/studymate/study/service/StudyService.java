@@ -98,6 +98,46 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
+    public MyStudyListResponse listMine(long userId, int page, int size) {
+        List<StudyMember> memberships = studyMemberRepository
+                .findMyActiveMemberships(userId, PageRequest.of(page, size));
+        if (memberships.isEmpty()) {
+            return new MyStudyListResponse(List.of());
+        }
+
+        List<Long> studyIds = memberships.stream().map(StudyMember::getStudyId).toList();
+
+        Map<Long, Study> studyById = studyRepository.findAllById(studyIds).stream()
+                .collect(Collectors.toMap(Study::getId, s -> s));
+
+        Map<Long, List<String>> tagsByStudy = studyTagRepository.findAllByStudyIdIn(studyIds).stream()
+                .collect(Collectors.groupingBy(
+                        StudyTag::getStudyId,
+                        Collectors.mapping(st -> resolveTagName(st.getTagId()), Collectors.toList())
+                ));
+
+        List<MyStudyItem> items = memberships.stream()
+                .map(sm -> {
+                    Study s = studyById.get(sm.getStudyId());
+                    return new MyStudyItem(
+                            s.getId(),
+                            s.getId(),
+                            s.getTitle(),
+                            tagsByStudy.getOrDefault(s.getId(), List.of()),
+                            s.getStatus(),
+                            sm.getRoleCode(),
+                            s.getCurrentMemberCount(),
+                            s.getMaxMembers(),
+                            s.getActivityCycle(),
+                            s.getDurationWeeks()
+                    );
+                })
+                .toList();
+
+        return new MyStudyListResponse(items);
+    }
+
+    @Transactional(readOnly = true)
     public StudyDetailResponse detail(long studyId) {
         Study study = studyRepository.findByIdAndIsDeletedFalse(studyId)
                 .orElseThrow(() -> new StudyException(ErrorCode.NOT_FOUND, "스터디를 찾을 수 없습니다."));
