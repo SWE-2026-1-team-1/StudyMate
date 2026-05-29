@@ -18,6 +18,23 @@ export type StudyListResponse = {
   size: number;
 };
 
+export type MyStudyItemResponse = {
+  studyId: number;
+  teamId: number;
+  title: string;
+  tags: string[];
+  status: StudyStatus;
+  role: string;
+  currentMembers: number;
+  maxMembers: number;
+  meetingCycle: string;
+  durationWeeks: number;
+};
+
+export type MyStudyListResponse = {
+  studies: MyStudyItemResponse[];
+};
+
 export type StudyDetailResponse = {
   studyId: number;
   title: string;
@@ -75,6 +92,13 @@ export type StudyApplicationResponse = {
 export const studiesApi = {
   list: async ({ page = 0, size = 20 }: { page?: number; size?: number } = {}) => {
     const response = await apiClient.get<StudyListResponse>("/api/studies", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  listMine: async ({ page = 0, size = 20 }: { page?: number; size?: number } = {}) => {
+    const response = await apiClient.get<MyStudyListResponse>("/api/studies/my", {
       params: { page, size },
     });
     return response.data;

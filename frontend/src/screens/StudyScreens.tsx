@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { createStudy, studies, studyDetail, topics } from "../data";
+import { createStudy, studyDetail, topics } from "../data";
 import { Avatar, Field, Hero, Illustration, PageHeading, Panel, SectionTitle, Shell, StatusRow, StudyCard, Toast } from "../components/Common";
 import { TagList } from "../components/TagInput";
 import { ROUTE_PATHS } from "../routes/routingMap";
 import { applicationsApi, type MyApplicationResponse } from "../api/applications";
 import { profileApi, type ProfileResponse } from "../api/profile";
-import { studiesApi, type CreateStudyRequest, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
+import { studiesApi, type CreateStudyRequest, type MyStudyItemResponse, type StudyDetailResponse, type StudySummaryResponse } from "../api/studies";
 import { teamMembersApi } from "../api/teamMembers";
 import { useLanguage } from "../i18n";
 import type { Study, StudyDetailData } from "../types";
@@ -37,6 +37,7 @@ type CreateStudyDraft = {
 };
 type ProfileMessage = { type: "success" | "error"; text: string } | null;
 type ToastMessage = { type: "success" | "error"; text: string } | null;
+type MyStudyCard = Study & { teamId: number };
 
 function formatApplicationDate(value: string) {
   const date = new Date(value);
@@ -79,6 +80,21 @@ function mapStudySummary(study: StudySummaryResponse): Study {
     tags,
     people: `${study.currentMembers}/${study.maxMembers}`,
     duration: study.status === "OPEN" ? "모집중" : "마감",
+    tone: resolveStudyTone(tags),
+  };
+}
+
+function mapMyStudySummary(study: MyStudyItemResponse): MyStudyCard {
+  const tags = study.tags.map(normalizeTag);
+  const roleLabel = study.role === "LEADER" ? "운영중" : "참여중";
+
+  return {
+    studyId: study.studyId,
+    teamId: study.teamId,
+    title: study.title,
+    tags,
+    people: `${study.currentMembers}/${study.maxMembers}`,
+    duration: `${roleLabel} · ${study.status === "OPEN" ? "모집중" : "마감"}`,
     tone: resolveStudyTone(tags),
   };
 }
@@ -304,6 +320,38 @@ export function ExplorePage() {
 
 function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof useNavigate> }) {
   const { translate } = useLanguage();
+  const [myStudies, setMyStudies] = useState<MyStudyCard[]>([]);
+  const [isLoadingMyStudies, setIsLoadingMyStudies] = useState(true);
+  const [myStudyLoadError, setMyStudyLoadError] = useState("");
+
+  useEffect(() => {
+    if (!localStorage.getItem("accessToken")) {
+      setIsLoadingMyStudies(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingMyStudies(true);
+    setMyStudyLoadError("");
+
+    studiesApi.listMine({ page: 0, size: 3 })
+      .then((response) => {
+        if (!isMounted) return;
+        setMyStudies(response.studies.map(mapMyStudySummary));
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setMyStudies([]);
+        setMyStudyLoadError("내 스터디를 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingMyStudies(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="dashboard-content-panel">
@@ -318,8 +366,20 @@ function MainDashboardContent({ onNavigate }: { onNavigate: ReturnType<typeof us
       </section>
       <section className="section-block">
         <SectionTitle title="My Study" action="마이페이지  →" onAction={() => onNavigate(ROUTE_PATHS.mypage)} />
+        {isLoadingMyStudies && <p className="section-note">{translate("내 스터디를 불러오는 중입니다.")}</p>}
+        {myStudyLoadError && <p className="section-note form-error">{translate(myStudyLoadError)}</p>}
+        {!isLoadingMyStudies && !myStudyLoadError && myStudies.length === 0 && (
+          <p className="section-note">{translate("아직 참여 중인 스터디가 없습니다.")}</p>
+        )}
         <div className="study-grid">
-          {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => onNavigate(ROUTE_PATHS.teamBoard())} />)}
+          {myStudies.map((study) => (
+            <StudyCard
+              key={study.teamId}
+              study={study}
+              action="입장하기"
+              onAction={() => onNavigate(ROUTE_PATHS.teamBoard(String(study.teamId)))}
+            />
+          ))}
         </div>
       </section>
     </div>
@@ -632,6 +692,9 @@ export function MyPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<ProfileMessage>(null);
+  const [myStudies, setMyStudies] = useState<MyStudyCard[]>([]);
+  const [isLoadingMyStudies, setIsLoadingMyStudies] = useState(true);
+  const [myStudyLoadError, setMyStudyLoadError] = useState("");
   const [myApplications, setMyApplications] = useState<MyApplicationResponse[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(true);
   const [applicationLoadError, setApplicationLoadError] = useState("");
@@ -671,6 +734,30 @@ export function MyPage() {
       })
       .finally(() => {
         if (isMounted) setIsLoadingProfile(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingMyStudies(true);
+    setMyStudyLoadError("");
+
+    studiesApi.listMine({ page: 0, size: 20 })
+      .then((response) => {
+        if (!isMounted) return;
+        setMyStudies(response.studies.map(mapMyStudySummary));
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setMyStudies([]);
+        setMyStudyLoadError("참여 중인 스터디를 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingMyStudies(false);
       });
 
     return () => {
@@ -854,8 +941,20 @@ export function MyPage() {
             </button>
           </div>
           <h2>{translate("참여 중인 스터디")}</h2>
+          {isLoadingMyStudies && <p className="section-note">{translate("참여 중인 스터디를 불러오는 중입니다.")}</p>}
+          {myStudyLoadError && <p className="section-note form-error">{translate(myStudyLoadError)}</p>}
+          {!isLoadingMyStudies && !myStudyLoadError && myStudies.length === 0 && (
+            <p className="section-note">{translate("아직 참여 중인 스터디가 없습니다.")}</p>
+          )}
           <div className="study-grid profile-study-grid">
-            {studies.map((study) => <StudyCard key={study.title} study={study} action="입장하기" onAction={() => navigate(ROUTE_PATHS.teamBoard())} />)}
+            {myStudies.map((study) => (
+              <StudyCard
+                key={study.teamId}
+                study={study}
+                action="입장하기"
+                onAction={() => navigate(ROUTE_PATHS.teamBoard(String(study.teamId)))}
+              />
+            ))}
           </div>
           <h2>{translate("지원 현황")}</h2>
           <Panel title="" className="application-panel">
