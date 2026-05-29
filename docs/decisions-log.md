@@ -258,6 +258,29 @@ PR/이슈/SRS·SDP·API 명세·SQL 스키마·UML 개정 시 이 문서를 함�
   - 회귀 테스트: `T-SIGN-07` (`AuthSignupIntegrationTest`) — 탈퇴 후 동일 email 재가입 → 201, 신규 id, 기존 탈퇴 row 유지.
   - 스키마 동기화: **변경 없음** (`studymate_schema.sql` / 운영 MySQL / H2 모두 그대로).
 
+### D-022. `GET /api/studies/my` — 내 스터디 목록 응답/쿼리 정합
+- 일자: 2026-05-29
+- 범위: 신규 엔드포인트 `GET /api/studies/my` (시트 행 "내 스터디 목록 조회", 작업 시트 #41)
+- 결정:
+  - 응답 필드: `studies[]` 각 row = `{ studyId, teamId, title, tags[], status, role, currentMembers, maxMembers, meetingCycle, durationWeeks }`. `totalCount`/페이징 메타 미포함 (시트 명세에 없음, 프론트 요구 시 별도 결정).
+  - 시트의 `meetingSchedule` → `meetingCycle` 로 명명 통일 (Sprint 3 D-013/D-015 명칭 일관).
+  - 시트의 `status: IN_PROGRESS` 본 작업 제외. 응답 status 는 `OPEN`/`CLOSED` 만. 사유: `Study.status` enum 에 IN_PROGRESS 미존재, 도입 시 전이 룰 / Sprint 3 PATCH 핸들러 / 자동 마감 흐름 전부 영향. 본 작업은 단일 조회 엔드포인트 추가이므로 도메인 enum 변경 회피.
+  - 시트의 `attendanceRate` 본 작업 제외. 사유: 출석 도메인 미구현 (D-020 §20.k 본 스프린트 제외). 출석 도메인 합류 시 응답 보강.
+  - `teamId` 값은 `studyId` 와 동일 (D-010).
+  - `role` 값: `study_member.role_code` (`LEADER` | `MEMBER`).
+  - 쿼리 조건: `study_member.user_id = me AND study_member.is_active = 1 AND study.is_deleted = 0`.
+  - 정렬: `study_member.joined_at DESC` (최근 가입 순).
+  - 페이징: `page=0`, `size=20`, `max=100` (Sprint 3 디폴트 답습).
+  - 인증 필수. 미인증 401 `UNAUTHORIZED` (시큐리티 레이어 표준 처리).
+- 근거:
+  - LEADER 본인 생성 스터디도 D-012 에 따라 `study_member` LEADER row 가 동시 생성되므로 "소유" + "참여" 단일 쿼리로 커버. union 불필요.
+  - 시트 명세의 잡음 필드(IN_PROGRESS / attendanceRate) 는 본 작업 본질("내 스터디 카드 노출")과 무관. 본질만 깎고 부가 필드는 해당 도메인 합류 시점에 동시 추가하는 편이 변경 범위 최소화.
+- 후속:
+  - 코드: `StudyMember Repository.findActiveJoinStudyByUserIdOrderByJoinedAtDesc(userId, Pageable)` 신규, `StudyService.listMine(...)`, `StudyController.listMine(...)`, `MyStudyListResponse` / `MyStudyItem` DTO 신규.
+  - 테스트: LEADER 노출, MEMBER 노출, 탈퇴/삭제 제외, 인증 없음 401 — 통합 테스트 4건.
+  - 시트 변경이력: `meetingSchedule → meetingCycle`, `IN_PROGRESS` 보류, `attendanceRate` 보류 (외부 시트 갱신은 marcus 가 별도 진행).
+  - DB 스키마 변경 없음.
+
 ---
 
 ## 2. 미해결 / 정합화 필요 항목 (Pending Discrepancies)
