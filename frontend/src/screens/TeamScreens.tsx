@@ -30,13 +30,6 @@ function getTeamStudyApiErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function formatJoinRequestDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "지원일 확인 불가";
-
-  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} 지원`;
-}
-
 function getInitials(name: string) {
   return name.trim().slice(0, 2) || "??";
 }
@@ -123,6 +116,7 @@ export function TeamBoard() {
   const [postType, setPostType] = useState<PostType>("NOTICE");
   const [posts, setPosts] = useState<PostDetailResponse[]>([]);
   const [commentsByPostId, setCommentsByPostId] = useState<Record<number, CommentResponse[]>>({});
+  const [commentCountsByPostId, setCommentCountsByPostId] = useState<Record<number, number>>({});
   const [isLoadingPosts, setIsLoadingPosts] = useState(isRealTeam);
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const [postError, setPostError] = useState("");
@@ -138,8 +132,11 @@ export function TeamBoard() {
 
   useEffect(() => {
     if (!isRealTeam) {
-      setPosts(teamPosts.map(mapMockPost));
-      setCommentsByPostId(Object.fromEntries(teamPosts.map((post, index) => [-(index + 1), mapMockComments(post)])));
+      const mockPosts = teamPosts.map(mapMockPost);
+      const mockCommentsByPostId = Object.fromEntries(teamPosts.map((post, index) => [-(index + 1), mapMockComments(post)]));
+      setPosts(mockPosts);
+      setCommentsByPostId(mockCommentsByPostId);
+      setCommentCountsByPostId(Object.fromEntries(mockPosts.map((post) => [post.postId, mockCommentsByPostId[post.postId]?.length ?? 0])));
       setIsLoadingPosts(false);
       setPostError("");
       return;
@@ -148,12 +145,25 @@ export function TeamBoard() {
     let isMounted = true;
     setIsLoadingPosts(true);
     setPostError("");
+    setCommentsByPostId({});
+    setCommentCountsByPostId({});
 
     postsApi.list(teamId)
       .then(async (response) => {
-        const details = await Promise.all(response.posts.map((post) => postsApi.get(teamId, post.postId)));
+        const [details, commentResults] = await Promise.all([
+          Promise.all(response.posts.map((post) => postsApi.get(teamId, post.postId))),
+          Promise.allSettled(response.posts.map((post) => postsApi.listComments(teamId, post.postId))),
+        ]);
         if (!isMounted) return;
         setPosts(details);
+        setCommentsByPostId(Object.fromEntries(commentResults.flatMap((result, index) => {
+          if (result.status !== "fulfilled") return [];
+          return [[response.posts[index].postId, result.value.comments]];
+        })));
+        setCommentCountsByPostId(Object.fromEntries(commentResults.map((result, index) => [
+          response.posts[index].postId,
+          result.status === "fulfilled" ? result.value.totalCount : 0,
+        ])));
       })
       .catch((error) => {
         if (!isMounted) return;
@@ -172,6 +182,8 @@ export function TeamBoard() {
         }
 
         setPosts([]);
+        setCommentsByPostId({});
+        setCommentCountsByPostId({});
         setPostError(getPostApiErrorMessage(error, "게시글 목록을 불러오지 못했습니다."));
       })
       .finally(() => {
@@ -199,6 +211,8 @@ export function TeamBoard() {
       const createdPost = await postsApi.create(teamId, { title, content, type: postType });
       const detail = await postsApi.get(teamId, createdPost.postId);
       setPosts((current) => [detail, ...current]);
+      setCommentsByPostId((current) => ({ ...current, [detail.postId]: [] }));
+      setCommentCountsByPostId((current) => ({ ...current, [detail.postId]: 0 }));
       setPostTitle("");
       setPostBody("");
       setPostType("NOTICE");
@@ -221,6 +235,7 @@ export function TeamBoard() {
     try {
       const response = await postsApi.listComments(teamId, postId);
       setCommentsByPostId((current) => ({ ...current, [postId]: response.comments }));
+      setCommentCountsByPostId((current) => ({ ...current, [postId]: response.totalCount }));
     } catch (error) {
       showToast({ type: "error", text: getPostApiErrorMessage(error, "댓글을 불러오지 못했습니다.") });
     }
@@ -261,6 +276,11 @@ export function TeamBoard() {
         delete nextComments[postId];
         return nextComments;
       });
+      setCommentCountsByPostId((current) => {
+        const nextCounts = { ...current };
+        delete nextCounts[postId];
+        return nextCounts;
+      });
       showToast({ type: "success", text: "게시글을 삭제했습니다." });
     } catch (error) {
       showToast({ type: "error", text: getPostApiErrorMessage(error, "게시글을 삭제하지 못했습니다.") });
@@ -280,6 +300,10 @@ export function TeamBoard() {
       setCommentsByPostId((current) => ({
         ...current,
         [postId]: [...(current[postId] ?? []), createdComment],
+      }));
+      setCommentCountsByPostId((current) => ({
+        ...current,
+        [postId]: (current[postId] ?? commentsByPostId[postId]?.length ?? 0) + 1,
       }));
       showToast({ type: "success", text: "댓글을 작성했습니다." });
     } catch (error) {
@@ -318,6 +342,10 @@ export function TeamBoard() {
       setCommentsByPostId((current) => ({
         ...current,
         [postId]: (current[postId] ?? []).filter((comment) => comment.commentId !== commentId),
+      }));
+      setCommentCountsByPostId((current) => ({
+        ...current,
+        [postId]: Math.max((current[postId] ?? commentsByPostId[postId]?.length ?? 1) - 1, 0),
       }));
       showToast({ type: "success", text: "댓글을 삭제했습니다." });
     } catch (error) {
@@ -378,6 +406,7 @@ export function TeamBoard() {
             key={post.postId}
             post={post}
             comments={commentsByPostId[post.postId] ?? []}
+            commentCount={commentCountsByPostId[post.postId] ?? commentsByPostId[post.postId]?.length ?? 0}
             isOpen={openPost === post.postId}
             isProcessingPost={processingPostId === post.postId}
             processingCommentId={processingCommentId}
@@ -706,9 +735,12 @@ export function TeamMembers() {
         {!isLoadingApplications && !applicationError && joinApplications.length === 0 && (
           <p className="section-note">{translate("대기 중인 가입 요청이 없습니다.")}</p>
         )}
-        {joinApplications.map(({ applicationId, applicantName, message, appliedAt }) => (
+        {joinApplications.map(({ applicationId, applicantName }) => (
           <div className="request-row" key={applicationId}>
-            <span><i className="initial-avatar">{getInitials(applicantName)}</i><b>{applicantName}</b><small>{message || formatJoinRequestDate(appliedAt)}</small></span>
+            <span>
+              <i className="initial-avatar">{getInitials(applicantName)}</i>
+              <b>{applicantName}</b>
+            </span>
             <div>
               <button className="primary" type="button" onClick={() => handleApproveApplication(applicationId)} disabled={processingApplicationId === applicationId}>
                 {processingApplicationId === applicationId ? "..." : translate("Accept")}
@@ -749,6 +781,7 @@ function TeamHeader({
 function Post({
   post,
   comments,
+  commentCount,
   isOpen,
   isProcessingPost,
   processingCommentId,
@@ -761,6 +794,7 @@ function Post({
 }: {
   post: PostDetailResponse;
   comments: CommentResponse[];
+  commentCount: number;
   isOpen: boolean;
   isProcessingPost: boolean;
   processingCommentId: number | null;
@@ -803,7 +837,7 @@ function Post({
       <footer>
         <button className="comment-toggle" type="button" onClick={onToggle} aria-expanded={isOpen}>
           <span aria-hidden="true" />
-          {comments.length}
+          {commentCount}
         </button>
         <time>{formatPostDate(createdAt)}</time>
         <strong>{translate(authorName)}</strong>

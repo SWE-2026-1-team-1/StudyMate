@@ -615,7 +615,7 @@ export function StudyDetail() {
         return;
       }
 
-      await studiesApi.apply(studyId, { message: "스터디에 참여하고 싶습니다." });
+      await studiesApi.apply(studyId, {});
       setHasApplied(true);
       showToast({ type: "success", text: "스터디 지원이 완료되었습니다." });
     } catch (error) {
@@ -773,7 +773,7 @@ export function MyPage() {
     applicationsApi.listMine()
       .then((response) => {
         if (!isMounted) return;
-        setMyApplications(response.applications);
+        setMyApplications(response.applications.filter((application) => application.status === "PENDING"));
       })
       .catch(() => {
         if (!isMounted) return;

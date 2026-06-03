@@ -123,7 +123,7 @@ export const studiesApi = {
     await apiClient.delete(`/api/studies/${studyId}`);
   },
 
-  apply: async (studyId: number | string, data: { message: string }) => {
+  apply: async (studyId: number | string, data: { message?: string }) => {
     const response = await apiClient.post<StudyApplicationResponse>(`/api/studies/${studyId}/applications`, data);
     return response.data;
   },
